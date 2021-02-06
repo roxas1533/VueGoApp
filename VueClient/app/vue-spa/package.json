@@ -6,7 +6,7 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint --format"
   },
   "dependencies": {
     "core-js": "^3.6.5",
@@ -28,5 +28,16 @@
     "eslint-plugin-import": "^2.20.2",
     "eslint-plugin-vue": "^6.2.2",
     "vue-template-compiler": "^2.6.11"
+  },
+  "jest-runner-eslint": {
+    "cliOptions": {
+      "fix": true,
+      "ext": [
+        ".js",
+        ".ts",
+        ".vue"
+      ]
+    }
   }
+
 }
