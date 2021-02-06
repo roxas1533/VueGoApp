@@ -1,5 +1,5 @@
 .DS_Store
-node_modules
+VueClient/app/vue-spa/node_modules
 /dist
 
 
