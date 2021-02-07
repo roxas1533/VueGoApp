@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 
-	"app/handler"
+	"work/handler"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
@@ -30,6 +30,9 @@ func main() {
 	// ルーティング
 	e.POST("/login", handler.YamabikoAPI(db))
 	e.POST("/register", handler.RegisterAPI(db))
+	r := e.Group("/home")
+	r.Use(middleware.JWT([]byte(handler.Secret)))
+	r.POST("", handler.GetHomeAPI())
 
 	// サーバー起動
 	e.Start(":8000")

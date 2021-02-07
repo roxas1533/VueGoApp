@@ -4,14 +4,15 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo"
 )
 
 // LoginParam は /yamabiko が受けとるJSONパラメータを定義します。
 type LoginParam struct {
-	Adress   string `json:"adress"`
-	Password string `json:"password"`
+	Adress   string `json:"mail"`
+	Password string `json:"pass"`
 }
 
 // UserInfo ログイン時のユーザーデータ
@@ -43,13 +44,17 @@ func YamabikoAPI(db *sql.DB) echo.HandlerFunc {
 			}
 			fmt.Println(user.id, user.address, user.password, user.name, user.cTime, user.uTime)
 			if param.Password != user.password {
-				return c.JSON(http.StatusOK, map[string]interface{}{"reslut": nil})
+				fmt.Println("パスワードが違います", param)
+				return c.JSON(http.StatusOK, map[string]interface{}{"reslut": "false"})
 			}
 		} else {
-			return c.JSON(http.StatusOK, map[string]interface{}{"reslut": nil})
+			fmt.Println("これ", param)
+			return c.JSON(http.StatusOK, map[string]interface{}{"reslut": "false"})
 		}
-		fmt.Println("存在確認")
-		return c.JSON(http.StatusOK, map[string]interface{}{"reslut": param.Adress})
+		// auth.getToken()
+		fmt.Println(param)
+		token := getToken(user.name, strconv.Itoa(user.id))
+		return c.JSON(http.StatusOK, map[string]interface{}{"reslut": param.Adress, "JWT": token})
 	}
 }
 
@@ -68,6 +73,13 @@ func RegisterAPI(db *sql.DB) echo.HandlerFunc {
 			return c.JSON(http.StatusOK, map[string]interface{}{"result": "already"})
 		}
 		fmt.Println(param)
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": "ok"})
+	}
+}
+
+func GetHomeAPI() echo.HandlerFunc {
+	return func(c echo.Context) error {
+
 		return c.JSON(http.StatusOK, map[string]interface{}{"result": "ok"})
 	}
 }
