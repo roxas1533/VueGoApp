@@ -26,6 +26,9 @@
   .loginContentLabel{
     text-align: left;
   }
+  .Emesssage{
+    color: red;
+  }
 </style>
 
 <template>
@@ -35,10 +38,11 @@
     </div>
     <div class="loginContents">
       <h1>ログイン</h1>
+      <div class="Emesssage">{{ErrorMessage}}</div>
       <p class="loginContentLabel">メールアドレス：</p>
-      <input @keydown.enter="Send" class="loginContent">
+      <input v-model="address" @keydown.enter="Send" class="loginContent">
         <p class="loginContentLabel">パスワード：</p>
-      <input @keydown.enter="Send" type="password" class="loginContent">
+      <input v-model="pass" @keydown.enter="Send" type="password" class="loginContent">
       <button @click="Send" id="loginButton" class="loginContent">ログイン</button>
     </div>
   </div>
@@ -49,8 +53,55 @@
 
 export default {
   name: 'Login',
+  data() {
+    return {
+      address: '',
+      pass: '',
+      ErrorMessage: '',
+    };
+  },
   methods: {
-    Send() {
+    async Send() {
+      this.check().then((res) => {
+        if (res) console.log(1);
+        else this.ErrorMessage = 'メールアドレスアドレスまたはパスワードが違います。';
+      });
+      // if (this.check())console.log('ok!'); else console.log('no!');
+    },
+    async check() {
+      let ok = true;
+      if (!this.address) {
+        ok = false;
+      }
+      if (!this.pass) {
+        ok = false;
+      }
+      if (!ok) return ok;
+
+      try {
+        const url = 'http://localhost:8000/login';
+        const data = {
+          mail: this.address,
+          pass: this.pass,
+        };
+        const returnData = await window.fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+        returnData.json().then((res) => {
+          console.log(res);
+        });
+        // if (returnData.reslut === 'false') {
+        //   return false;
+        // }
+        return true;
+      } catch (e) {
+        console.log(e);
+        return e;
+      }
     },
     RedirectRegister() {
       this.$router.push({ name: 'register' });
