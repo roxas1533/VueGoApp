@@ -7,7 +7,7 @@
     margin-right: 1em;
     margin-left: 1em;
     margin-top: 1em;
-    background-color: #0a0014;
+    background-color: #0f0a3b;
   }
 </style>
 <template>

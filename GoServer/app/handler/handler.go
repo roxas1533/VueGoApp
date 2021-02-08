@@ -20,6 +20,12 @@ type LoginParam struct {
 	Password string `json:"pass"`
 }
 
+type RegisterParam struct {
+	Name     string `json:"name"`
+	Adress   string `json:"mail"`
+	Password string `json:"pass"`
+}
+
 // UserInfo ログイン時のユーザーデータ
 type UserInfo struct {
 	id       int
@@ -70,8 +76,8 @@ func CheckHeader(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// YamabikoAPI は /api/hello のPost時のJSONデータ生成処理を行います。
-func YamabikoAPI(db *sql.DB) echo.HandlerFunc {
+// LoginAPI は /api/hello のPost時のJSONデータ生成処理を行います。
+func LoginAPI(db *sql.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		param := new(LoginParam)
 
@@ -88,7 +94,6 @@ func YamabikoAPI(db *sql.DB) echo.HandlerFunc {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println(user.id, user.address, user.password, user.name, user.cTime, user.uTime)
 			if param.Password != user.password {
 				return c.JSON(http.StatusOK, map[string]interface{}{"reslut": "false"})
 			}
@@ -104,7 +109,7 @@ func YamabikoAPI(db *sql.DB) echo.HandlerFunc {
 //RegisterAPI 登録時にDBサーバに問い合わせます
 func RegisterAPI(db *sql.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		param := new(LoginParam)
+		param := new(RegisterParam)
 
 		if err := c.Bind(param); err != nil {
 			return err
@@ -115,9 +120,20 @@ func RegisterAPI(db *sql.DB) echo.HandlerFunc {
 		if count != 0 {
 			return c.JSON(http.StatusOK, map[string]interface{}{"result": "already"})
 		}
-		fmt.Println(param)
 
-		return c.JSON(http.StatusOK, map[string]interface{}{"result": "ok"})
+		var id int
+		var address string
+		var password string
+		var name string
+		var createdTime string
+		var updatedTime string
+		db.Exec("insert into users(mail_adress,password,name,created_time,updated_time) values(?,?,?,default,default)", param.Adress, param.Password, param.Name)
+		db.QueryRow("select * FROM users order by id desc limit 1;").Scan(&id, &address, &password, &name, &createdTime, &updatedTime)
+		if count != 0 {
+			return c.JSON(http.StatusOK, map[string]interface{}{"result": "already"})
+		}
+		token := getToken(name, strconv.Itoa(id))
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": "ok", "JWT": token})
 	}
 }
 
@@ -132,8 +148,15 @@ func TalkAPI(db *sql.DB) echo.HandlerFunc {
 		if err := c.Bind(content); err != nil {
 			return err
 		}
-		_, err := db.Exec("insert into timeline(name,created_time,content,userid) values(?,default,?,?)", claims["name"], content.Content, claims["sub"])
-		if err != nil {
+		db.Exec(`insert into timeline(name,created_time,content,userid) values(?,default,?,?)`, claims["name"], content.Content, claims["sub"])
+		row := db.QueryRow(`select * from timeline limit 1`)
+		var id int
+		var name string
+		var time string
+		var userid int
+		var talkContent string
+		if err := row.Scan(&id, &name, &time, &talkContent, &userid); err != nil {
+			fmt.Println(err)
 			return c.JSON(http.StatusOK, map[string]interface{}{"result": "no"})
 		}
 		// // Write
@@ -142,7 +165,7 @@ func TalkAPI(db *sql.DB) echo.HandlerFunc {
 		liveTalkContent.ID = 1
 		liveTalkContent.Name = claims["name"].(string)
 		liveTalkContent.Content = content.Content
-		liveTalkContent.Time = claims["iat"].(string)
+		liveTalkContent.Time = time
 		liveTalkContent.UserID, _ = strconv.Atoi(claims["sub"].(string))
 		jsonString, _ := json.Marshal(liveTalkContent)
 		for cl := range client {
@@ -156,11 +179,18 @@ func TalkAPI(db *sql.DB) echo.HandlerFunc {
 	}
 }
 
+//GetTimeLine タイムライン取得
 func GetTimeLine(db *sql.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id := c.Param("id")
-		fmt.Println(id)
-		rows, err := db.Query("select * FROM timeline limit ?;", id)
+		from := c.Param("from")
+		var rows *sql.Rows
+		var err error
+		if from == "0" {
+			rows, err = db.Query("select * FROM timeline order by id desc limit ?;", id)
+		} else {
+			rows, err = db.Query("select * FROM timeline where id<? order by id desc limit ?;", from, id)
+		}
 		if err != nil {
 			panic(err)
 		}

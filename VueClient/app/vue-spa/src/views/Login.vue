@@ -61,13 +61,14 @@ export default {
     };
   },
   created() {
-
+    if (this.$store.state.JWTtoken !== '') {
+      this.$router.push({ name: 'Home' });
+    }
   },
   methods: {
     async Send() {
       this.check().then((res) => {
-        if (res) console.log(1);
-        else { this.ErrorMessage = 'メールアドレスアドレスまたはパスワードが違います。'; this.pass = ''; }
+        if (!res) { this.ErrorMessage = 'メールアドレスアドレスまたはパスワードが違います。'; this.pass = ''; }
       });
       // if (this.check())console.log('ok!'); else console.log('no!');
     },

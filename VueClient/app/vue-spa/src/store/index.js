@@ -6,6 +6,7 @@ Vue.use(Vuex);
 export default new Vuex.Store({
   state: {
     JWTtoken: '',
+    loadID: 0,
   },
   mutations: {
   },

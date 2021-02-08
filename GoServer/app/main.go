@@ -28,13 +28,13 @@ func main() {
 	e.Use(middleware.Recover())
 
 	// ルーティング
-	e.POST("/login", handler.YamabikoAPI(db))
+	e.POST("/login", handler.LoginAPI(db))
 	e.POST("/register", handler.RegisterAPI(db))
 	talk := e.Group("")
 	// talk.Use(handler.CheckHeader)
 	talk.Use(middleware.JWT([]byte(handler.Secret)))
 	talk.POST("/talk", handler.TalkAPI(db))
-	talk.POST("/get/:id", handler.GetTimeLine(db))
+	talk.POST("/get/:id/:from", handler.GetTimeLine(db))
 	r := e.Group("/home")
 	r.Use(handler.CustomMiddleware)
 	r.GET("/getTimeLine", handler.WebsocketServer)
