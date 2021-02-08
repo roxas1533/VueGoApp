@@ -1,12 +1,13 @@
 package handler
 
 import (
+	"fmt"
 	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware"
-	jwt "github.com/form3tech-oss/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
+//Secret Secret key
 var Secret string = "qjG+ocH6KFhO6V1Ys1kXIY1VXTF7Ne/VztlPYasW/gSEyKkYHEha9auA/qr20+njG0qy3yRk+Nf+yMBEwzXNEQ=="
 
 func getToken(username string, id string) string {
@@ -20,10 +21,45 @@ func getToken(username string, id string) string {
 	return tokenString
 }
 
-// JwtMiddleware check token
-var JwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
-	ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+//CheckToken JWTトークンを検証します。
+func CheckToken(r string) bool {
+	token, err := jwt.Parse(r, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return "", nil
+		}
 		return []byte(Secret), nil
-	},
-	SigningMethod: jwt.SigningMethodHS512,
-})
+	})
+	if token == nil {
+		return false
+	}
+	if err != nil {
+		if ve, ok := err.(*jwt.ValidationError); ok {
+			if ve.Errors&jwt.ValidationErrorExpired != 0 {
+				fmt.Printf("%s is expired", r)
+				return false
+			}
+			fmt.Printf("%s is invalid", r)
+			return false
+		}
+		fmt.Printf("%s is invalid", r)
+		return false
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		fmt.Printf("no claims")
+		return false
+	}
+	userID, ok := claims["name"].(string)
+	if !ok {
+		fmt.Printf("no claims")
+		return false
+	}
+	id, ok := claims["sub"].(string)
+	if !ok {
+		fmt.Printf("no claims")
+		return false
+	}
+	fmt.Println(userID)
+	fmt.Println(id)
+	return true
+}

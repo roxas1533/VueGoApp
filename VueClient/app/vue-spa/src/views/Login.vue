@@ -60,11 +60,14 @@ export default {
       ErrorMessage: '',
     };
   },
+  created() {
+
+  },
   methods: {
     async Send() {
       this.check().then((res) => {
         if (res) console.log(1);
-        else this.ErrorMessage = 'メールアドレスアドレスまたはパスワードが違います。';
+        else { this.ErrorMessage = 'メールアドレスアドレスまたはパスワードが違います。'; this.pass = ''; }
       });
       // if (this.check())console.log('ok!'); else console.log('no!');
     },
@@ -90,13 +93,10 @@ export default {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(data),
-        });
-        returnData.json().then((res) => {
-          console.log(res);
-        });
-        // if (returnData.reslut === 'false') {
-        //   return false;
-        // }
+        }).then((res) => res.json());
+        if (returnData.reslut === 'false') return false;
+        this.$store.state.JWTtoken = returnData.JWT;
+        this.$router.push({ name: 'Home' });
         return true;
       } catch (e) {
         console.log(e);

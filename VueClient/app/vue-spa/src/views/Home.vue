@@ -22,6 +22,11 @@ import TalkArea from '../components/TalkArea.vue';
 import TimeLine from '../components/TimeLineArea.vue';
 
 export default {
+  created() {
+    if (this.$store.state.JWTtoken === '') {
+      this.$router.push({ name: 'Login' });
+    }
+  },
   components: {
     TalkArea,
     TimeLine,

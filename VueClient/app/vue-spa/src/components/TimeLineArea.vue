@@ -28,6 +28,15 @@
 import talkContent from './ContentArea.vue';
 
 export default {
+  created() {
+    const socket = new WebSocket('ws://localhost:8000/getTimeLine');
+    socket.onopen = function () {
+      console.log('ok');
+    };
+    socket.onmessage = function (evt) {
+      console.log(evt.data);
+    };
+  },
   components: {
     talkContent,
   },

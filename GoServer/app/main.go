@@ -30,10 +30,15 @@ func main() {
 	// ルーティング
 	e.POST("/login", handler.YamabikoAPI(db))
 	e.POST("/register", handler.RegisterAPI(db))
+	talk := e.Group("")
+	// talk.Use(handler.CheckHeader)
+	talk.Use(middleware.JWT([]byte(handler.Secret)))
+	talk.POST("/talk", handler.TalkAPI(db))
+	talk.POST("/get/:id", handler.GetTimeLine(db))
 	r := e.Group("/home")
-	r.Use(middleware.JWT([]byte(handler.Secret)))
-	r.POST("", handler.GetHomeAPI())
+	r.Use(handler.CustomMiddleware)
+	r.GET("/getTimeLine", handler.WebsocketServer)
 
 	// サーバー起動
-	e.Start(":8000")
+	e.Logger.Fatal(e.Start(":8000"))
 }
