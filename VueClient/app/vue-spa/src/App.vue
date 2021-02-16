@@ -5,16 +5,17 @@
 </template>
 
 <style>
+  @import url("https://use.fontawesome.com/releases/v5.6.1/css/all.css");
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  background-color: #0f0a3b;
+  background-color: #1b2a37;
   font-family: "Helvetica Neue" , Helvetica , Arial , Verdana , Roboto , "游ゴシック" , "Yu Gothic" , "游ゴシック体" ,
    "YuGothic" , "ヒラギノ角ゴ Pro W3" , "Hiragino Kaku Gothic Pro" , "Meiryo UI" , "メイリオ" , Meiryo , "ＭＳ Ｐゴシック" , "MS PGothic" , sans-serif;
    color:#888888;
-background-color: #0f0a3b;
 }
 
 #nav {

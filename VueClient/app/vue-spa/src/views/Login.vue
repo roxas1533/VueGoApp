@@ -1,10 +1,14 @@
 <style scoped>
+.home{
+  width: 100%;
+}
   .RegiserContent{
     text-align: right;
   }
   .loginContents{
     display: inline-block;
-    width:300pt;
+    width: 50%;
+    max-width:500px;
   }
   #newRegister{
     border-radius: 5px;
@@ -16,7 +20,8 @@
   }
   input{
     font-size: 1.2em;
-    height: 1.5em;
+    width: 100%;
+    height: 80%;
   }
   .loginContent{
     width: 100%;
@@ -83,7 +88,7 @@ export default {
       if (!ok) return ok;
 
       try {
-        const url = 'http://localhost:8000/login';
+        const url = `${this.$store.state.APIserver}/login`;
         const data = {
           mail: this.address,
           pass: this.pass,

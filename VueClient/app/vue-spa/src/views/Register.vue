@@ -68,8 +68,27 @@ export default {
     };
   },
   methods: {
-    Send() {
-      if (this.Check() === true) console.log('ok!'); else console.log('だめ');
+    async Send() {
+      if (this.Check() === true) {
+        const url = `${this.$store.state.APIserver}/register`;
+        const data = {
+          Name: this.username,
+          mail: this.address,
+          pass: this.password,
+        };
+        const returnData = await window.fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        }).then((res) => res.json());
+        if (returnData.result === 'already') this.mailError = '既に登録されたアドレスです。';
+        else if (returnData.result === 'ok') {
+          this.$store.state.JWTtoken = returnData.JWT;
+          this.$router.push({ name: 'Home' });
+        } else console.log(returnData);
+      } else console.log('だめ');
     },
     Check() {
       let ok = true;

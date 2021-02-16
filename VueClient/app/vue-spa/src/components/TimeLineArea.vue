@@ -18,8 +18,7 @@
 </style>
 
 <template>
-    <div class="TimeLineContents" id="TimeLineContents">
-    </div>
+  <div class="TimeLineContents" id="TimeLineContents"></div>
 </template>
 
 <script>
@@ -28,6 +27,7 @@ import talkContent from './ContentArea.vue';
 
 let socket;
 let timeLineC;
+let snc = false;
 export default {
   destoryed() {
     socket.close();
@@ -36,21 +36,25 @@ export default {
   },
   methods: {
     async ScrollE() {
-      if (this.$store.state.loadID !== 1) {
-        if (Math.round((timeLineC.scrollTop / (timeLineC.scrollHeight - timeLineC.clientHeight)) * 100) > 80) {
-          const url = `http://localhost:8000/get/20/${this.$store.state.loadID}`;
-          const returnData = await window.fetch(url, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${this.$store.state.JWTtoken}`,
-              'Content-Type': 'application/json',
-            },
-          }).then((res) => res.json());
-          if (returnData.result !== null) {
-            returnData.result.forEach((element) => {
-              this.AddContentEnd(element);
-            });
-            this.$store.state.loadID = returnData.result.pop().ID;
+      if (snc === false) {
+        if (this.$store.state.loadID !== 1) {
+          if (Math.round((timeLineC.scrollTop / (timeLineC.scrollHeight - timeLineC.clientHeight)) * 100) > 80) {
+            const url = `${this.$store.state.APIserver}/get/20/${this.$store.state.loadID}`;
+            snc = true;
+            const returnData = await window.fetch(url, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${this.$store.state.JWTtoken}`,
+                'Content-Type': 'application/json',
+              },
+            }).then((res) => res.json());
+            if (returnData.result !== null) {
+              returnData.result.forEach((element) => {
+                this.AddContentEnd(element);
+              });
+              this.$store.state.loadID = returnData.result.pop().ID;
+              snc = false;
+            }
           }
         }
       }
@@ -94,7 +98,7 @@ export default {
     timeLineC.addEventListener('scroll', this.ScrollE);
 
     if (this.$store.state.JWTtoken !== '') {
-      const url = 'http://localhost:8000/get/20/0';
+      const url = `${this.$store.state.APIserver}/get/20/0`;
       const returnData = await window.fetch(url, {
         method: 'POST',
         headers: {
@@ -108,7 +112,7 @@ export default {
         });
         this.$store.state.loadID = returnData.result.pop().ID;
       }
-      socket = new WebSocket('ws://localhost:8000/home/getTimeLine', [this.$store.state.JWTtoken]);
+      socket = new WebSocket(`ws://${this.$store.state.websocketserver}/home/getTimeLine`, [this.$store.state.JWTtoken]);
       const that = this;
       socket.onmessage = function (evt) {
         const data = JSON.parse(evt.data);
