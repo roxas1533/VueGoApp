@@ -233,3 +233,11 @@ func WebsocketServer(c echo.Context) error {
 	}
 
 }
+
+func GetUserProfileImg() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id := c.Param("id")
+		fmt.Println(id)
+		return c.File("default_user.png")
+	}
+}

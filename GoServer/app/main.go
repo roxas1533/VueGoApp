@@ -30,6 +30,7 @@ func main() {
 	// ルーティング
 	e.POST("/login", handler.LoginAPI(db))
 	e.POST("/register", handler.RegisterAPI(db))
+	e.GET("/profile/:id", handler.GetUserProfileImg())
 	talk := e.Group("")
 	// talk.Use(handler.CheckHeader)
 	talk.Use(middleware.JWT([]byte(handler.Secret)))

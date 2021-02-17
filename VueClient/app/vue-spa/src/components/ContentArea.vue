@@ -1,60 +1,91 @@
 <style scoped>
     .contents{
         text-align: left;
-        width: 100%;
         border-bottom: solid thin;
         border-color: black;
-
+        display: flex;
+        padding: 8px;
     }
     .string{
-         margin-left: 2em;
-        margin-top: 0.1em;
+        display: block;
+        margin: 0px;
+        width: 100%;
+        /* width: clac(100%-50px); */
+        /* margin-left: 50px; */
     }
     .username{
+        margin: 0px;
         font-weight: bold;
     }
     .id,.time{
         font-size: 0.7em;
     }
-    .time{
-        margin-left: auto;
-    }
-    .name,.time{
-        display: inline-block;
-        margin-bottom: 0em;
-        margin-top: 0.5em;
-        color: white;
 
+    .name,.time{
+        margin: 0px;
+        display: inline-block;
+        color: white;
+    }
+    .name{
+        width: 135px;
+    }
+    .time{
+        padding-left: 5px;
+        margin-right: 0px;
+    }
+    .Wrapname{
+        width: 100%;
     }
     .title{
         display: flex;
+        /* width: 100%; */
     }
     .content{
         margin-top: 0em;
         margin-bottom: 1em;
         color: white;
-
+        /* display: none; */
     }
+    .pimg{
+        width: 36px;
+        height: 36px;
+        float: left;
+    }
+
 </style>
 <template>
     <div class="contents">
-        <div class="string">
+        <img v-bind:src="profile+'/profile/'+Imageid+'.png'" class="pimg">
+        <div class="string" id="string">
             <div class="title">
-                <p class="name"><span class="username">{{username}} </span><span class="id">@{{id}}</span></p>
-                <pre class="time">{{time}}</pre>
+                <div class="wrappname">
+                  <p class="name" id="name"><span class="username">{{username}} </span><span class="id">@{{id}}</span></p>
+                </div>
+                <div class="timeWrap">
+                    <p class="time" id="time">{{time}}</p>
+                </div>
             </div>
-            <p class="content">{{content}}</p>
+        <p class="content">{{content}}</p>
         </div>
+
     </div>
 </template>
 
 <script>
+import C from '../store/const';
+
 export default {
   props: {
     username: String, // 追加
     content: String, // 追加
     id: Number, // 追加
     time: String,
+  },
+  data() {
+    return {
+      profile: C.APIserver,
+      Imageid: this.id,
+    };
   },
 };
 </script>

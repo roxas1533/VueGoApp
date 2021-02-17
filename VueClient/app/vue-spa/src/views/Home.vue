@@ -17,7 +17,7 @@
   top: 50%;
   left: 50%;
   transform: translateY(-50%) translateX(-50%);
-  transform: translateY(-50%) translateX(-50%);
+
   margin: auto;
 
   }
