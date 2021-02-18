@@ -19,15 +19,16 @@
     }
     .id,.time{
         font-size: 0.7em;
+        color: rgb(95, 107, 113);
     }
 
     .name,.time{
         margin: 0px;
         display: inline-block;
-        color: white;
     }
     .name{
-        width: 135px;
+        color: white;
+        width: 146px;
     }
     .time{
         padding-left: 5px;
@@ -55,7 +56,7 @@
 </style>
 <template>
     <div class="contents">
-        <img v-bind:src="profile+'/profile/'+Imageid+'.png'" class="pimg">
+        <img v-bind:src="profile+'/profile/'+id+'.png?'+(new Date()).getMinutes()" class="pimg">
         <div class="string" id="string">
             <div class="title">
                 <div class="wrappname">
@@ -84,7 +85,6 @@ export default {
   data() {
     return {
       profile: C.APIserver,
-      Imageid: this.id,
     };
   },
 };

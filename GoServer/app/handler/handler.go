@@ -2,11 +2,14 @@ package handler
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/websocket"
@@ -20,6 +23,7 @@ type LoginParam struct {
 	Password string `json:"pass"`
 }
 
+//RegisterParam は登録時のパラメーターを定義します
 type RegisterParam struct {
 	Name     string `json:"name"`
 	Adress   string `json:"mail"`
@@ -51,6 +55,11 @@ type LiveTalkContent struct {
 	UserID  int    `json:"UserID"`
 }
 
+type UpdateUserContent struct {
+	UserName     string `json:"UserName"`
+	ProfileImage string `json:"ProfileImage"`
+}
+
 // WebSocket 更新用
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -76,7 +85,7 @@ func CheckHeader(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// LoginAPI は /api/hello のPost時のJSONデータ生成処理を行います。
+// LoginAPI はログイン時のPost時のJSONデータ生成処理を行います。
 func LoginAPI(db *sql.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		param := new(LoginParam)
@@ -102,7 +111,7 @@ func LoginAPI(db *sql.DB) echo.HandlerFunc {
 		}
 		// auth.getToken()
 		token := getToken(user.name, strconv.Itoa(user.id))
-		return c.JSON(http.StatusOK, map[string]interface{}{"reslut": param.Adress, "JWT": token})
+		return c.JSON(http.StatusOK, map[string]interface{}{"reslut": "ok", "JWT": token, "userName": user.name, "userID": user.id})
 	}
 }
 
@@ -148,14 +157,14 @@ func TalkAPI(db *sql.DB) echo.HandlerFunc {
 		if err := c.Bind(content); err != nil {
 			return err
 		}
-		db.Exec(`insert into timeline(name,created_time,content,userid) values(?,default,?,?)`, claims["name"], content.Content, claims["sub"])
-		row := db.QueryRow(`select * from timeline limit 1`)
+		db.Exec(`insert into timeline(created_time,content,userid) values(default,?,?)`, content.Content, claims["sub"])
+		row := db.QueryRow(`select timeline.id,timeline.created_time,content,name 
+		from timeline inner join users on timeline.userid=users.id order by id desc limit 1`)
 		var id int
 		var name string
 		var time string
-		var userid int
 		var talkContent string
-		if err := row.Scan(&id, &name, &time, &talkContent, &userid); err != nil {
+		if err := row.Scan(&id, &time, &talkContent, &name); err != nil {
 			fmt.Println(err)
 			return c.JSON(http.StatusOK, map[string]interface{}{"result": "no"})
 		}
@@ -163,7 +172,7 @@ func TalkAPI(db *sql.DB) echo.HandlerFunc {
 		liveTalkContent := new(LiveTalkContent)
 		liveTalkContent.Type = "push"
 		liveTalkContent.ID = 1
-		liveTalkContent.Name = claims["name"].(string)
+		liveTalkContent.Name = name
 		liveTalkContent.Content = content.Content
 		liveTalkContent.Time = time
 		liveTalkContent.UserID, _ = strconv.Atoi(claims["sub"].(string))
@@ -187,9 +196,11 @@ func GetTimeLine(db *sql.DB) echo.HandlerFunc {
 		var rows *sql.Rows
 		var err error
 		if from == "0" {
-			rows, err = db.Query("select * FROM timeline order by id desc limit ?;", id)
+			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
+			from timeline inner join users on timeline.userid=users.id order by id desc limit ?`, id)
 		} else {
-			rows, err = db.Query("select * FROM timeline where id<? order by id desc limit ?;", from, id)
+			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
+			from timeline inner join users on timeline.userid=users.id where timeline.id<? order by id desc limit ?;`, from, id)
 		}
 		if err != nil {
 			panic(err)
@@ -202,13 +213,44 @@ func GetTimeLine(db *sql.DB) echo.HandlerFunc {
 			var content string
 			var time string
 			var userid int
-			if err := rows.Scan(&id, &name, &time, &content, &userid); err != nil {
+			if err := rows.Scan(&id, &time, &content, &userid, &name); err != nil {
 				log.Fatal(err)
 			}
 			liveTalkContent := LiveTalkContent{"push", id, name, content, time, userid}
 			liveTalkContents = append(liveTalkContents, liveTalkContent)
 		}
 		return c.JSON(http.StatusOK, map[string]interface{}{"result": liveTalkContents})
+	}
+}
+
+//UpdateUserInfo はユーザーデータをアップデートします。
+func UpdateUserInfo(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ucontent := new(UpdateUserContent)
+		if err := c.Bind(ucontent); err != nil {
+			return err
+		}
+		user := c.Get("user").(*jwt.Token)
+		claims := user.Claims.(jwt.MapClaims)
+
+		splited := strings.Split(ucontent.ProfileImage, ",")
+		if len(splited) > 1 {
+			Imagebyte, err := base64.StdEncoding.DecodeString(splited[1])
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{"result": "faild"})
+			}
+			w, err := os.Create(claims["sub"].(string) + ".png")
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]interface{}{"result": "failed"})
+			}
+			defer w.Close()
+			w.Write(Imagebyte)
+		}
+		fmt.Println(ucontent.UserName, claims["sub"])
+		r, _ := db.Exec(`update users set name=? where id=?;`, ucontent.UserName, claims["sub"])
+		fmt.Println(r.RowsAffected())
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": "ok"})
+
 	}
 }
 
@@ -234,10 +276,15 @@ func WebsocketServer(c echo.Context) error {
 
 }
 
+//GetUserProfileImg はユーザアイコンを取得します
 func GetUserProfileImg() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id := c.Param("id")
+		_, err := os.Stat(id)
 		fmt.Println(id)
+		if err == nil {
+			return c.File(id)
+		}
 		return c.File("default_user.png")
 	}
 }

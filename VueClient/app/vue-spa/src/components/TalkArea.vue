@@ -94,6 +94,7 @@
   }
   .menuText:hover{
     background-color: #20dcfd;
+    cursor: pointer;
   }
 
 </style>
@@ -107,7 +108,7 @@
         </button>
         <div class="settingString">設定</div>
         <div id="settingmenu">
-          <a class="menuText">プロフィール</a>
+          <a class="menuText" @click="open">プロフィール</a>
           <hr>
           <a class="menuText" @click="logout">ログアウト</a>
         </div>
@@ -129,6 +130,9 @@ export default {
     };
   },
   methods: {
+    open() {
+      this.$emit('open');
+    },
     set() {
       const w = document.getElementById('logoutButton').clientWidth;
       document.documentElement.style.setProperty('--width', w);

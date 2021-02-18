@@ -102,6 +102,8 @@ export default {
         }).then((res) => res.json());
         if (returnData.reslut === 'false') return false;
         this.$store.state.JWTtoken = returnData.JWT;
+        this.$store.state.userName = returnData.userName;
+        this.$store.state.userId = returnData.userID;
         this.$router.push({ name: 'Home' });
         return true;
       } catch (e) {

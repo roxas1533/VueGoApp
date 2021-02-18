@@ -59,7 +59,7 @@ func CheckToken(r string) bool {
 		fmt.Printf("no claims")
 		return false
 	}
-	fmt.Println(userID)
-	fmt.Println(id)
+	_ = userID
+	_ = id
 	return true
 }
