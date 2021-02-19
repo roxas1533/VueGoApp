@@ -10,12 +10,14 @@
         display: block;
         margin: 0px;
         width: 100%;
-        /* width: clac(100%-50px); */
-        /* margin-left: 50px; */
     }
     .username{
         margin: 0px;
         font-weight: bold;
+        cursor: pointer;
+    }
+    .username:hover{
+        text-decoration: underline;
     }
     .id,.time{
         font-size: 0.7em;
@@ -33,19 +35,21 @@
     .time{
         padding-left: 5px;
         margin-right: 0px;
+
     }
     .Wrapname{
         width: 100%;
     }
+    .timeWrap{
+         margin-left: auto;
+    }
     .title{
         display: flex;
-        /* width: 100%; */
     }
     .content{
         margin-top: 0em;
         margin-bottom: 1em;
         color: white;
-        /* display: none; */
     }
     .pimg{
         width: 36px;
@@ -60,15 +64,14 @@
         <div class="string" id="string">
             <div class="title">
                 <div class="wrappname">
-                  <p class="name" id="name"><span class="username">{{username}} </span><span class="id">@{{id}}</span></p>
+                  <p class="name" id="name"><span @click="showProfile" class="username">{{username}} </span><span class="id">@{{id}}</span></p>
                 </div>
                 <div class="timeWrap">
                     <p class="time" id="time">{{time}}</p>
                 </div>
             </div>
-        <p class="content">{{content}}</p>
+            <p class="content">{{content}}</p>
         </div>
-
     </div>
 </template>
 
@@ -86,6 +89,11 @@ export default {
     return {
       profile: C.APIserver,
     };
+  },
+  methods: {
+    showProfile() {
+      this.$emit('showProfile', this.username, this.id);
+    },
   },
 };
 </script>

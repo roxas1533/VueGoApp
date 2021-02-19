@@ -6,11 +6,31 @@
       display: block;
       margin-left: 0px;
   }
- #talkButton,#logoutButton{
+  #logoutButton{
      border-radius: 10px;
      font-size: 1.6em;
-     display: inline-block;
- }
+  }
+  #talkButton{
+    color: white;
+    height: 30px;
+    border: none;
+    border-radius: 100vh;
+    outline: none;
+    font-size: 1.2em;
+    width: 80px;
+    background-color: rgb(0, 183, 255);
+    display: inline-block;
+    cursor: pointer;
+  }
+  #talkButton:disabled{
+    color: rgba(0, 183, 255,0.5);
+    background-color: rgba(0, 183, 255,0.2);
+    cursor:default ;
+  }
+  #talkButton:hover:active{
+    background-color: rgb(0, 89, 255);
+    outline: none;
+  }
  .Talk{
      display: inline-block;
      text-align: right;
@@ -100,8 +120,8 @@
 </style>
 <template>
     <div class="Talk">
-      <textarea class="TalkComponent" v-model="content" rows="8" cols="30" placeholder="Talk!"></textarea>
-      <button class="TalkComponent" id="talkButton" @click="Talk">Talk</button>
+      <textarea class="TalkComponent" @keyup="check" v-model="talkContent" rows="8" cols="30" placeholder="Talk!"></textarea>
+      <button disabled class="TalkComponent" id="talkButton" @click="Talk" >Talk</button>
       <div class="setting">
         <button class="TalkComponent" id="logoutButton" @click="set">
           <i class="fas fa-cog"></i>
@@ -126,10 +146,17 @@ export default {
 
   data() {
     return {
-      content: '',
+      talkContent: '',
     };
   },
   methods: {
+    check() {
+      if (this.talkContent !== '') {
+        document.getElementById('talkButton').removeAttribute('disabled');
+      } else {
+        document.getElementById('talkButton').setAttribute('disabled', true);
+      }
+    },
     open() {
       this.$emit('open');
     },
@@ -143,12 +170,10 @@ export default {
       this.$router.push({ name: 'Login' });
     },
     async Talk() {
-      console.log(getComputedStyle(document.getElementById('settingmenu')).left);
-
-      if (this.content !== '') {
+      if (this.talkContent !== '') {
         const url = `${this.$store.state.APIserver}/talk`;
         const data = {
-          Content: this.content,
+          Content: this.talkContent,
         };
         const returnData = await window.fetch(url, {
           method: 'POST',
@@ -162,7 +187,8 @@ export default {
           this.$store.state.JWTtoken = '';
           this.$router.push({ name: 'Login' });
         }
-        this.content = '';
+        this.talkContent = '';
+        document.getElementById('talkButton').setAttribute('disabled', true);
       }
     },
   },

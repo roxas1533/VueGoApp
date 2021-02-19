@@ -194,16 +194,7 @@
 export default {
   props: {
   },
-  //   computed: {
-  //     innerusername: {
-  //       get() {
-  //         return this.$store.state.userName;
-  //       },
-  //       set(value) {
-  //         this.$emit('change', value);
-  //       },
-  //     },
-  //   },
+
   data() {
     return {
       profile: `${this.$store.state.APIserver}/profile/${this.$store.state.userId}?${(new Date()).getMinutes()}`,

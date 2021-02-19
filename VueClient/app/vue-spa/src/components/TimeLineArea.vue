@@ -70,11 +70,15 @@ export default {
             time: data.Time,
           },
         });
+        instance.$on('showProfile', this.showProfile);
         instance.$mount();
         // c.appendch;
         // c.insertBefore(instance.$el, c.firstChild);
         timeLineC.appendChild(instance.$el);
       }
+    },
+    showProfile(username, uid) {
+      this.$emit('showProfile', username, uid);
     },
     AddContentTop(data) {
       if (data.Type === 'push') {
@@ -113,10 +117,9 @@ export default {
         this.$store.state.loadID = returnData.result.pop().ID;
       }
       socket = new WebSocket(`ws://${this.$store.state.websocketserver}/home/getTimeLine`, [this.$store.state.JWTtoken]);
-      const that = this;
-      socket.onmessage = function (evt) {
+      socket.onmessage = (evt) => {
         const data = JSON.parse(evt.data);
-        that.AddContentTop(data);
+        this.AddContentTop(data);
       };
     }
   },
