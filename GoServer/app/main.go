@@ -36,6 +36,7 @@ func main() {
 	talk.Use(middleware.JWT([]byte(handler.Secret)))
 	talk.POST("/talk", handler.TalkAPI(db))
 	talk.POST("/get/:id/:from", handler.GetTimeLine(db))
+	talk.POST("/getusers/:userid/:id/:from", handler.GetTimeLineUser(db))
 	talk.POST("/update", handler.UpdateUserInfo(db))
 	r := e.Group("/home")
 	r.Use(handler.CustomMiddleware)

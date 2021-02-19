@@ -1,10 +1,15 @@
 <style scoped>
 
-  .Home{
+  .col{
     --Edisplay:none;
     --Pdisplay:none;
     display: flex;
     width: 100%;
+    position: relative;
+
+  }
+  .Home{
+    display:block;
     position: relative;
   }
   .HomeContents{
@@ -14,7 +19,7 @@
     margin-top: 1em;
     background-color: #0f0a3b;
   }
-  .ProfileEdit,#model-container{
+  .ProfileEdit{
     position: absolute;
     width: 58%;
     max-width: 550px;
@@ -23,26 +28,26 @@
     transform: translateY(-50%) translateX(-50%);
     margin: auto;
   }
-  .ProfileEdit{
-    display: var(--Edisplay);
-  }
-  .PersonalProfile{
-    display: var(--Pdisplay);
-  }
-  .overlay{
+#model-container{
     position: absolute;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    top: 0px;
+    left: 0px;
+    pointer-events: none;
+}
+  .ProfileEdit{
     display: var(--Edisplay);
   }
 </style>
 <template>
   <div class="Home" id="Home">
-    <TalkArea @open="open" class="HomeContents"></TalkArea>
-    <TimeLine @showProfile="showProfile" class="HomeContents"></TimeLine>
-    <div class=overlay @click="closeEdit"></div>
-    <ProfileEdit @close="closeEdit" class="ProfileEdit" id="ProfileEdit"></ProfileEdit>
+    <div class="col">
+      <TalkArea @open="open" class="HomeContents"></TalkArea>
+      <TimeLine @showProfile="showProfile" class="HomeContents"></TimeLine>
+      <div class=overlay @click="closeEdit"></div>
+      <ProfileEdit @close="closeEdit" class="ProfileEdit" id="ProfileEdit"></ProfileEdit>
+    </div>
     <div id="model-container"></div>
     <!-- <PersonalProfile @close="closeEdit" class="PersonalProfile" id="PersonalProfile" :screenname="name" :userID="uid"></PersonalProfile> -->
   </div>
@@ -80,6 +85,7 @@ export default {
       document.getElementById('Home').style.setProperty('--Edisplay', 'none');
     },
     showProfile(sc, id) {
+      const mc = document.getElementById('model-container');
       const store = this.$store;
       const ComponentClass = Vue.extend(PersonalProfile);
       const instance = new ComponentClass({
@@ -89,11 +95,12 @@ export default {
           userID: id,
         },
       });
-      // instance.$on('showProfile', this.showProfile);
+      instance.$on('showProfile', this.showProfile);
       instance.$mount();
       // c.appendch;
       // c.insertBefore(instance.$el, c.firstChild);
-      document.getElementById('model-container').appendChild(instance.$el);
+      // mc.style.height = '100%';
+      mc.appendChild(instance.$el);
       // document.getElementById('Home').style.setProperty('--Pdisplay', 'block');
     },
   },

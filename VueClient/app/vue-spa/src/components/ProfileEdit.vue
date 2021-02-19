@@ -154,6 +154,7 @@
 </style>
 <template>
     <div>
+        <Overray></Overray>
         <div class="TitleBar">
             <div class="close">
                 <div @click="close" class="t-middle">
@@ -191,10 +192,14 @@
 </template>
 
 <script>
+import Overray from './overray.vue';
+
 export default {
   props: {
   },
-
+  components: {
+    Overray,
+  },
   data() {
     return {
       profile: `${this.$store.state.APIserver}/profile/${this.$store.state.userId}?${(new Date()).getMinutes()}`,

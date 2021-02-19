@@ -10,8 +10,8 @@
       width: 10px;
     }
     ::-webkit-scrollbar-track{
-      background: #4444;
-      border-left: solid 1px #ececec;
+      background: rgb(20, 32, 43);
+      border-left: solid thin #ececec;
     }
     ::-webkit-scrollbar-thumb{
       background: #888;
@@ -32,8 +32,8 @@
     }
 
     .WrapEdit{
-        border-top: solid 2px white;
-        border-bottom: solid 1px black;
+        border-top: solid thin white;
+        border-bottom: solid thin black;
         display: flex;
     }
     .edit{
@@ -95,32 +95,50 @@
         height: 550px;
         border-radius: 0px 0px 15px 15px;
     }
+    .overray{
+        position: absolute;
+    }
+    .main{
+        position: fixed;
+        width: 58%;
+        max-width: 550px;
+        top: 50%;
+        left: 50%;
+        transform: translateY(-50%) translateX(-50%);
+        margin: auto;
+        position: absolute;
+        pointer-events: auto;
+        z-index: 300;
+    }
 </style>
 <template>
     <div>
-        <div class="TitleBar">
-            <div class="close">
-                <div @click="close" class="t-middle">
-                    <div class="t-middle-middle">
-                        <i @click="close" class="tims fas fa-times"></i>
+        <overray class="overray" @close="close"></overray>
+        <div class="main">
+            <div class="TitleBar">
+                <div class="close">
+                    <div @click="close" class="t-middle">
+                        <div class="t-middle-middle">
+                            <i @click="close" class="tims fas fa-times"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="WrapEdit">
-            <div class=edit>
-                <div class="wrapImage">
-                    <img :src="profile" class="userImage">
-                </div>
-                <div class="screenName">
-                    <span class="screenname">{{screenname}}</span>
-                </div>
-                <div class="wrapuserID">
-                    <span class="userID">@{{userID}}</span>
+            <div class="WrapEdit">
+                <div class=edit>
+                    <div class="wrapImage">
+                        <img :src="profile" class="userImage">
+                    </div>
+                    <div class="screenName">
+                        <span class="screenname">{{screenname}}</span>
+                    </div>
+                    <div class="wrapuserID">
+                        <span class="userID">@{{userID}}</span>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="userContent" id="userContent">
+            <div class="userContent" id="userContent">
+            </div>
         </div>
     </div>
 </template>
@@ -128,14 +146,18 @@
 <script>
 import Vue from 'vue';
 import talkContent from './ContentArea.vue';
+import overray from './overray.vue';
 
 export default {
+  components: {
+    overray,
+  },
   props: {
     screenname: String,
     userID: Number,
   },
   async mounted() {
-    const url = `${this.$store.state.APIserver}/get/20/0`;
+    const url = `${this.$store.state.APIserver}/getusers/${this.userID}/20/0`;
     const returnData = await window.fetch(url, {
       method: 'POST',
       headers: {
@@ -154,7 +176,7 @@ export default {
 
   data() {
     return {
-      profile: `${this.$store.state.APIserver}/profile/${this.$store.state.userId}?${(new Date()).getMinutes()}`,
+      profile: `${this.$store.state.APIserver}/profile/${this.userID}.png?${(new Date()).getMinutes()}`,
       innerusername: this.$store.state.userName,
     };
   },
@@ -190,6 +212,11 @@ export default {
     focus(e) {
       const c = e.target.lastElementChild;
       if (c) c.focus();
+    },
+    showProfile(sc, id) {
+      this.$emit('showProfile', sc, id);
+      this.$destroy();
+      if (this.$el.parentNode) this.$el.parentNode.removeChild(this.$el);
     },
     close() {
       this.$destroy();

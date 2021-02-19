@@ -206,21 +206,47 @@ func GetTimeLine(db *sql.DB) echo.HandlerFunc {
 			panic(err)
 		}
 		defer rows.Close()
-		var liveTalkContents []LiveTalkContent
-		for rows.Next() {
-			var id int
-			var name string
-			var content string
-			var time string
-			var userid int
-			if err := rows.Scan(&id, &time, &content, &userid, &name); err != nil {
-				log.Fatal(err)
-			}
-			liveTalkContent := LiveTalkContent{"push", id, name, content, time, userid}
-			liveTalkContents = append(liveTalkContents, liveTalkContent)
-		}
-		return c.JSON(http.StatusOK, map[string]interface{}{"result": liveTalkContents})
+		return returnTalkContents(c, rows)
 	}
+}
+
+func GetTimeLineUser(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		userid := c.Param("userid")
+		id := c.Param("id")
+		from := c.Param("from")
+		var rows *sql.Rows
+		var err error
+		if from == "0" {
+			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
+			from timeline inner join users on timeline.userid=users.id where timeline.userid=? order by id desc limit ?`, userid, id)
+		} else {
+			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
+			from timeline inner join users on timeline.userid=users.id where timeline.id<? and timeline.userid=? order by id desc limit ?;`, from, userid, id)
+		}
+		if err != nil {
+			panic(err)
+		}
+		defer rows.Close()
+		return returnTalkContents(c, rows)
+	}
+}
+
+func returnTalkContents(c echo.Context, rows *sql.Rows) error {
+	var liveTalkContents []LiveTalkContent
+	for rows.Next() {
+		var id int
+		var name string
+		var content string
+		var time string
+		var userid int
+		if err := rows.Scan(&id, &time, &content, &userid, &name); err != nil {
+			log.Fatal(err)
+		}
+		liveTalkContent := LiveTalkContent{"push", id, name, content, time, userid}
+		liveTalkContents = append(liveTalkContents, liveTalkContent)
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{"result": liveTalkContents})
 }
 
 //UpdateUserInfo はユーザーデータをアップデートします。
