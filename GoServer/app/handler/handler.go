@@ -314,3 +314,59 @@ func GetUserProfileImg() echo.HandlerFunc {
 		return c.File("default_user.png")
 	}
 }
+
+func IsFollow(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var count int
+		id := c.Param("id")
+		user := c.Get("user").(*jwt.Token)
+		claims := user.Claims.(jwt.MapClaims)
+		db.QueryRow("select COUNT(*) FROM follows where userid=? and followid=?;", claims["sub"], id).Scan(&count)
+		if count == 0 {
+			return c.JSON(http.StatusOK, map[string]interface{}{"result": false})
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": true})
+	}
+}
+
+//Follow は指定したユーザをフォローします。
+func Follow(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var count int
+		id := c.Param("id")
+		user := c.Get("user").(*jwt.Token)
+
+		claims := user.Claims.(jwt.MapClaims)
+		db.QueryRow("select COUNT(*) FROM follows where userid=? and followid=?;", claims["sub"], id).Scan(&count)
+		if count != 0 {
+			return c.JSON(http.StatusOK, map[string]interface{}{"result": false})
+		}
+		_, error := db.Exec("insert into follows(userid,followid,created_time) value(?,?,default)", claims["sub"], id)
+		if error != nil {
+			return c.JSON(http.StatusOK, map[string]interface{}{"result": false})
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": true})
+
+	}
+}
+
+//UnFollow は指定したユーザのフォローを解除します。
+func UnFollow(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var count int
+		id := c.Param("id")
+		user := c.Get("user").(*jwt.Token)
+
+		claims := user.Claims.(jwt.MapClaims)
+		db.QueryRow("select COUNT(*) FROM follows where userid=? and followid=?;", claims["sub"], id).Scan(&count)
+		if count == 0 {
+			return c.JSON(http.StatusOK, map[string]interface{}{"result": false})
+		}
+		_, error := db.Exec("delete from follows where userid=? and followid=?;", claims["sub"], id)
+		if error != nil {
+			return c.JSON(http.StatusOK, map[string]interface{}{"result": false})
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": true})
+
+	}
+}

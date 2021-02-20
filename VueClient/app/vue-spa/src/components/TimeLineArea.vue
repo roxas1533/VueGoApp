@@ -1,6 +1,10 @@
 <style scoped>
+    .Timeline{
+      width: 20em;
+      margin-left: 5px;
+    }
     .TimeLineContents{
-        width: 20em;
+       height: calc(100% - 50px);
         overflow-y:auto;
     }
     ::-webkit-scrollbar{
@@ -15,10 +19,40 @@
       border-radius: 10px;
       box-shadow: inset 0 0 0 2px #888;
     }
+
+    .header{
+      height: 50px;
+      border-bottom: thin solid black;
+      box-shadow: 0px 2px 10px black;
+      text-align: left;
+      /* justify-content: center; */
+      align-items:center;
+      display: flex;
+    }
+    .wrapFas{
+      width: 24px;
+      margin-left: 10px;
+    }
+    .homeString{
+      color:white;
+      font-size: 1.2em;
+      font-weight: bold;
+
+    }
 </style>
 
 <template>
-  <div class="TimeLineContents" id="TimeLineContents"></div>
+  <div class="Timeline">
+      <div class="header">
+        <div class="wrapFas">
+          <i class="fas fa-home"></i>
+        </div>
+        <span class="homeString">
+          Home
+        </span>
+      </div>
+      <div class="TimeLineContents" id="TimeLineContents"></div>
+  </div>
 </template>
 
 <script>
@@ -59,7 +93,7 @@ export default {
         }
       }
     },
-    AddContentEnd(data) {
+    makeContent(data) {
       if (data.Type === 'push') {
         const ComponentClass = Vue.extend(talkContent);
         const instance = new ComponentClass({
@@ -72,28 +106,18 @@ export default {
         });
         instance.$on('showProfile', this.showProfile);
         instance.$mount();
-        // c.appendch;
-        // c.insertBefore(instance.$el, c.firstChild);
-        timeLineC.appendChild(instance.$el);
+        return instance;
       }
+      return null;
+    },
+    AddContentEnd(data) {
+      timeLineC.appendChild(this.makeContent(data).$el);
     },
     showProfile(username, uid) {
       this.$emit('showProfile', username, uid);
     },
     AddContentTop(data) {
-      if (data.Type === 'push') {
-        const ComponentClass = Vue.extend(talkContent);
-        const instance = new ComponentClass({
-          propsData: {
-            username: data.name,
-            content: data.Content,
-            id: data.UserID,
-            time: data.Time,
-          },
-        });
-        instance.$mount();
-        timeLineC.insertBefore(instance.$el, timeLineC.firstChild);
-      }
+      timeLineC.insertBefore(this.makeContent(data).$el, timeLineC.firstChild);
     },
   },
   async mounted() {

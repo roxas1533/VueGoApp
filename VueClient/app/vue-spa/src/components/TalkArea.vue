@@ -35,6 +35,9 @@
      display: inline-block;
      text-align: right;
      position: relative;
+     padding-left: 10px;
+     padding-right: 10px;
+     padding-top: 10px;
  }
   ::-webkit-scrollbar{
     width: 10px;

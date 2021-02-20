@@ -6,27 +6,14 @@
     display: flex;
     width: 100%;
     position: relative;
-
+    height: 98vh;
   }
   .Home{
     display:block;
     position: relative;
   }
   .HomeContents{
-    height: 95vh;
-    margin-right: 1em;
-    margin-left: 1em;
-    margin-top: 1em;
     background-color: #0f0a3b;
-  }
-  .ProfileEdit{
-    position: absolute;
-    width: 58%;
-    max-width: 550px;
-    top: 50%;
-    left: 50%;
-    transform: translateY(-50%) translateX(-50%);
-    margin: auto;
   }
 #model-container{
     position: absolute;
@@ -36,9 +23,6 @@
     left: 0px;
     pointer-events: none;
 }
-  .ProfileEdit{
-    display: var(--Edisplay);
-  }
 </style>
 <template>
   <div class="Home" id="Home">
@@ -46,7 +30,7 @@
       <TalkArea @open="open" class="HomeContents"></TalkArea>
       <TimeLine @showProfile="showProfile" class="HomeContents"></TimeLine>
       <div class=overlay @click="closeEdit"></div>
-      <ProfileEdit @close="closeEdit" class="ProfileEdit" id="ProfileEdit"></ProfileEdit>
+      <!-- <ProfileEdit @close="closeEdit" class="ProfileEdit" id="ProfileEdit"></ProfileEdit> -->
     </div>
     <div id="model-container"></div>
     <!-- <PersonalProfile @close="closeEdit" class="PersonalProfile" id="PersonalProfile" :screenname="name" :userID="uid"></PersonalProfile> -->
@@ -75,11 +59,20 @@ export default {
   components: {
     TalkArea,
     TimeLine,
-    ProfileEdit,
   },
   methods: {
     open() {
-      document.getElementById('Home').style.setProperty('--Edisplay', 'block');
+      const mc = document.getElementById('model-container');
+      const store = this.$store;
+      const ComponentClass = Vue.extend(ProfileEdit);
+      const instance = new ComponentClass({
+        store,
+      });
+      instance.$mount();
+      // c.appendch;
+      // c.insertBefore(instance.$el, c.firstChild);
+      // mc.style.height = '100%';
+      mc.appendChild(instance.$el);
     },
     closeEdit() {
       document.getElementById('Home').style.setProperty('--Edisplay', 'none');
@@ -101,7 +94,6 @@ export default {
       // c.insertBefore(instance.$el, c.firstChild);
       // mc.style.height = '100%';
       mc.appendChild(instance.$el);
-      // document.getElementById('Home').style.setProperty('--Pdisplay', 'block');
     },
   },
 };

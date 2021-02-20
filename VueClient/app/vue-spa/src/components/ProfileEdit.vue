@@ -151,40 +151,57 @@
         height: 112px;
         clear:all;
     }
+    .overray{
+        position: absolute;
+    }
+    .main{
+        position: fixed;
+        width: 58%;
+        max-width: 550px;
+        top: 50%;
+        left: 50%;
+        transform: translateY(-50%) translateX(-50%);
+        margin: auto;
+        position: absolute;
+        pointer-events: auto;
+        z-index: 300;
+    }
 </style>
 <template>
     <div>
-        <Overray></Overray>
-        <div class="TitleBar">
-            <div class="close">
-                <div @click="close" class="t-middle">
-                    <div class="t-middle-middle">
-                        <i @click="close" class="tims fas fa-times"></i>
+        <overray class="overray" @close="close"></overray>
+        <div class="main">
+            <div class="TitleBar">
+                <div class="close">
+                    <div @click="close" class="t-middle">
+                        <div class="t-middle-middle">
+                            <i @click="close" class="tims fas fa-times"></i>
+                        </div>
                     </div>
                 </div>
+                <div class="editprofile">
+                    <h2>プロフィールを編集</h2>
+                </div>
+                <div class="save" @click="saveProfile">
+                    <span>保存</span>
+                </div>
             </div>
-            <div class="editprofile">
-                <h2>プロフィールを編集</h2>
-            </div>
-            <div class="save" @click="saveProfile">
-                <span>保存</span>
-            </div>
-        </div>
-        <div class=edit>
-            <div class="wrapImage">
-                <img :src="profile" class="userImage">
-                <label for="file">
-                    <div class="wrapPlus">
-                    <input @change="se" type="file" id="file" style="display:none;" accept=".png">
-                    <i class="fas fa-plus-circle"></i>
-                    </div>
-                </label>
+            <div class=edit>
+                <div class="wrapImage">
+                    <img :src="profile" class="userImage">
+                    <label for="file">
+                        <div class="wrapPlus">
+                        <input @change="se" type="file" id="file" style="display:none;" accept=".png">
+                        <i class="fas fa-plus-circle"></i>
+                        </div>
+                    </label>
 
-            </div>
-            <div class="boxPadding">
-                <div class="nameBox" v-on:click="focus">
-                    <p class="detail">名前</p>
-                    <input type="text" class="name" v-model="innerusername">
+                </div>
+                <div class="boxPadding">
+                    <div class="nameBox" v-on:click="focus">
+                        <p class="detail">名前</p>
+                        <input type="text" class="name" v-model="innerusername">
+                    </div>
                 </div>
             </div>
         </div>
@@ -192,13 +209,13 @@
 </template>
 
 <script>
-import Overray from './overray.vue';
+import overray from './overray.vue';
 
 export default {
   props: {
   },
   components: {
-    Overray,
+    overray,
   },
   data() {
     return {
@@ -222,7 +239,8 @@ export default {
       if (c) c.focus();
     },
     close() {
-      this.$emit('close');
+      this.$destroy();
+      if (this.$el.parentNode) this.$el.parentNode.removeChild(this.$el);
     },
     async saveProfile() {
       const data = {

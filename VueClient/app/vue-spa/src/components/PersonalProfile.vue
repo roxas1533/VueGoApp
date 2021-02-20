@@ -12,6 +12,8 @@
     ::-webkit-scrollbar-track{
       background: rgb(20, 32, 43);
       border-left: solid thin #ececec;
+      border-radius: 0 0 10px 0px;
+
     }
     ::-webkit-scrollbar-thumb{
       background: #888;
@@ -24,7 +26,7 @@
         padding-right: 15px;
     }
 
-    .TitleBar,.WrapEdit{
+    .TitleBar,.WrapEdit,.ffconent{
         display: flex;
         background-color: rgb(20, 32, 43);
         position: relative;
@@ -69,7 +71,7 @@
         padding: 12px;
     }
     .wrapImage{
-        border: solid black 1px;
+        border: solid black thin;
         display: inline-block;
         position: relative;
         margin-top: 20px;
@@ -92,7 +94,7 @@
     .userContent{
         overflow-y:auto;
         background-color:rgb(20, 32, 43);
-        height: 550px;
+        height: 500px;
         border-radius: 0px 0px 15px 15px;
     }
     .overray{
@@ -110,6 +112,18 @@
         pointer-events: auto;
         z-index: 300;
     }
+    .ffconent{
+      border-bottom: solid black thin;
+      height: 70px;
+      align-items: start;
+    }
+    .ff{
+      border-left: thin black solid;
+    }
+    #ffButon{
+      margin-left: auto;
+    }
+
 </style>
 <template>
     <div>
@@ -137,6 +151,13 @@
                     </div>
                 </div>
             </div>
+            <div class="ffconent">
+                <FFcontent title="TALKS" :num=0></FFcontent>
+                <FFcontent title="FOLLOWING" class="ff" :num=1></FFcontent>
+                <FFcontent title="FOLLOWERS" class="ff" :num=0></FFcontent>
+                <div id="ffButon">
+                </div>
+            </div>
             <div class="userContent" id="userContent">
             </div>
         </div>
@@ -147,18 +168,41 @@
 import Vue from 'vue';
 import talkContent from './ContentArea.vue';
 import overray from './overray.vue';
+import FFcontent from './FFContent.vue';
+import FollowButton from './FollowButton.vue';
+import unFollowButton from './UnFollowButton.vue';
 
 export default {
   components: {
     overray,
+    FFcontent,
   },
   props: {
     screenname: String,
     userID: Number,
   },
   async mounted() {
+    let returnData = await window.fetch(`${this.$store.state.APIserver}/isFollow/${this.userID}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${this.$store.state.JWTtoken}`,
+        'Content-Type': 'text/plain',
+      },
+    }).then((res) => res.json());
+    let ComponentClass;
+    if (returnData.result === true) {
+      ComponentClass = Vue.extend(unFollowButton);
+    } else {
+      ComponentClass = Vue.extend(FollowButton);
+    }
+    const instance = new ComponentClass();
+    instance.$on('follow', this.follow);
+    instance.$on('unfollow', this.unfollow);
+    instance.$mount();
+    document.getElementById('ffButon').appendChild(instance.$el);
+    //----------------------------------------------------------------------------------------------------------
     const url = `${this.$store.state.APIserver}/getusers/${this.userID}/20/0`;
-    const returnData = await window.fetch(url, {
+    returnData = await window.fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.$store.state.JWTtoken}`,
@@ -168,7 +212,6 @@ export default {
     if (returnData.result !== null) {
       returnData.result.forEach((element) => {
         this.AddContentEnd(element);
-        // console.log(element);
       });
       this.$store.state.loadID = returnData.result.pop().ID;
     }
@@ -178,9 +221,44 @@ export default {
     return {
       profile: `${this.$store.state.APIserver}/profile/${this.userID}.png?${(new Date()).getMinutes()}`,
       innerusername: this.$store.state.userName,
+      Follow: '',
     };
   },
   methods: {
+    async follow() {
+      const url = `${this.$store.state.APIserver}/follow/${this.userID}`;
+      const returnData = await window.fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.$store.state.JWTtoken}`,
+          'Content-Type': 'application/json',
+        },
+      }).then((res) => res.json());
+      if (returnData.result) {
+        const ComponentClass = Vue.extend(unFollowButton);
+        const instance = new ComponentClass();
+        instance.$on('unfollow', this.unfollow);
+        instance.$mount();
+        document.getElementById('ffButon').appendChild(instance.$el);
+      }
+    },
+    async unfollow() {
+      const url = `${this.$store.state.APIserver}/unfollow/${this.userID}`;
+      const returnData = await window.fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.$store.state.JWTtoken}`,
+          'Content-Type': 'application/json',
+        },
+      }).then((res) => res.json());
+      if (returnData.result) {
+        const ComponentClass = Vue.extend(FollowButton);
+        const instance = new ComponentClass();
+        instance.$on('follow', this.follow);
+        instance.$mount();
+        document.getElementById('ffButon').appendChild(instance.$el);
+      }
+    },
     AddContentEnd(data) {
     // if (data.Type === 'push') {
       const ComponentClass = Vue.extend(talkContent);
@@ -194,8 +272,6 @@ export default {
       });
       instance.$on('showProfile', this.showProfile);
       instance.$mount();
-      // c.appendch;
-      // c.insertBefore(instance.$el, c.firstChild);
       document.getElementById('userContent').appendChild(instance.$el);
       // }
     },

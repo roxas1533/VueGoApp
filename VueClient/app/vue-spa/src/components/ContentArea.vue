@@ -2,9 +2,11 @@
     .contents{
         text-align: left;
         border-bottom: solid thin;
+        /* border-top: solid thin; */
         border-color: black;
         display: flex;
         padding: 8px;
+        cursor: pointer;
     }
     .string{
         display: block;
@@ -55,12 +57,13 @@
         width: 36px;
         height: 36px;
         float: left;
+        cursor: pointer;
     }
 
 </style>
 <template>
     <div class="contents">
-        <img v-bind:src="profile+'/profile/'+id+'.png?'+(new Date()).getMinutes()" class="pimg">
+        <img  @click="showProfile" v-bind:src="profile+'/profile/'+id+'.png?'+(new Date()).getMinutes()" class="pimg">
         <div class="string" id="string">
             <div class="title">
                 <div class="wrappname">
