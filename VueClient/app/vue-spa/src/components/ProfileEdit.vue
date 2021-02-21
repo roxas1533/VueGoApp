@@ -219,7 +219,7 @@ export default {
   },
   data() {
     return {
-      profile: `${this.$store.state.APIserver}/profile/${this.$store.state.userId}?${(new Date()).getMinutes()}`,
+      profile: `${this.$store.state.APIserver}/profile/${this.$store.state.userId}.png?${(new Date()).getMinutes()}`,
       innerusername: this.$store.state.userName,
     };
   },
@@ -247,7 +247,6 @@ export default {
         UserName: this.innerusername,
         ProfileImage: this.profile,
       };
-      console.log(data);
       const returnData = await window.fetch(`${this.$store.state.APIserver}/update`, {
         method: 'POST',
         headers: {
@@ -256,7 +255,11 @@ export default {
         },
         body: JSON.stringify(data),
       }).then((res) => res.json());
-      console.log(returnData);
+      if (returnData.result === 'ok') {
+        this.close();
+      } else {
+        console.log('アップデート失敗');
+      }
     },
   },
 };

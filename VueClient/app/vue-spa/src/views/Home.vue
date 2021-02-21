@@ -28,12 +28,12 @@
   <div class="Home" id="Home">
     <div class="col">
       <TalkArea @open="open" class="HomeContents"></TalkArea>
-      <TimeLine @showProfile="showProfile" class="HomeContents"></TimeLine>
+      <TimeLine @showProfile="showProfile" class="HomeContents" type="Global"></TimeLine>
+      <TimeLine @showProfile="showProfile" class="HomeContents" type="Home"></TimeLine>
       <div class=overlay @click="closeEdit"></div>
       <!-- <ProfileEdit @close="closeEdit" class="ProfileEdit" id="ProfileEdit"></ProfileEdit> -->
     </div>
     <div id="model-container"></div>
-    <!-- <PersonalProfile @close="closeEdit" class="PersonalProfile" id="PersonalProfile" :screenname="name" :userID="uid"></PersonalProfile> -->
   </div>
 </template>
 
@@ -89,6 +89,7 @@ export default {
         },
       });
       instance.$on('showProfile', this.showProfile);
+      instance.$on('showEditProfile', this.open);
       instance.$mount();
       // c.appendch;
       // c.insertBefore(instance.$el, c.firstChild);

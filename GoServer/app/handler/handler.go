@@ -70,7 +70,9 @@ var upgrader = websocket.Upgrader{
 //CustomMiddleware WebScoket時にトークンを検証する。
 func CustomMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		if CheckToken(c.Request().Header["Sec-Websocket-Protocol"][0]) {
+		token := CheckToken(c.Request().Header["Sec-Websocket-Protocol"][0])
+		if token != nil {
+			c.Set("user", token)
 			return next(c)
 		}
 		return echo.NewHTTPError(http.StatusUnauthorized)
@@ -146,7 +148,10 @@ func RegisterAPI(db *sql.DB) echo.HandlerFunc {
 	}
 }
 
-var client = make(map[*websocket.Conn]bool)
+var (
+	globalClient = make(map[*websocket.Conn]bool)
+	homeClient   = make(map[*websocket.Conn]map[int]bool)
+)
 
 //TalkAPI タイムライン投稿API
 func TalkAPI(db *sql.DB) echo.HandlerFunc {
@@ -177,10 +182,20 @@ func TalkAPI(db *sql.DB) echo.HandlerFunc {
 		liveTalkContent.Time = time
 		liveTalkContent.UserID, _ = strconv.Atoi(claims["sub"].(string))
 		jsonString, _ := json.Marshal(liveTalkContent)
-		for cl := range client {
+		for cl := range globalClient {
 			err := cl.WriteMessage(websocket.TextMessage, []byte(jsonString))
 			if err != nil {
 				c.Logger().Error(err)
+			}
+		}
+		for cl, v := range homeClient {
+			for id := range v {
+				if strconv.Itoa(id) == claims["sub"].(string) {
+					err := cl.WriteMessage(websocket.TextMessage, []byte(jsonString))
+					if err != nil {
+						c.Logger().Error(err)
+					}
+				}
 			}
 		}
 
@@ -210,6 +225,33 @@ func GetTimeLine(db *sql.DB) echo.HandlerFunc {
 	}
 }
 
+//GetUsersTimeLine 認証済みユーザーのタイムライン取得
+func GetUsersTimeLine(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id := c.Param("id")
+		from := c.Param("from")
+		user := c.Get("user").(*jwt.Token)
+		claims := user.Claims.(jwt.MapClaims)
+		var rows *sql.Rows
+		var err error
+		if from == "0" {
+			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name from follows join timeline on 
+			timeline.userid=follows.followid and follows.userid=? 
+			join users on timeline.userid=users.id order by timeline.id desc limit ?;`, claims["sub"], id)
+		} else {
+			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name from follows join timeline on 
+			timeline.userid=follows.followid and follows.userid=? 
+			join users on timeline.userid=users.id where timeline.id<? order by timeline.id desc limit ?;`, claims["sub"], from, id)
+		}
+		if err != nil {
+			panic(err)
+		}
+		defer rows.Close()
+		return returnTalkContents(c, rows)
+	}
+}
+
+//GetTimeLineUser 指定したユーザーのツイート取得
 func GetTimeLineUser(db *sql.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		userid := c.Param("userid")
@@ -219,10 +261,11 @@ func GetTimeLineUser(db *sql.DB) echo.HandlerFunc {
 		var err error
 		if from == "0" {
 			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
-			from timeline inner join users on timeline.userid=users.id where timeline.userid=? order by id desc limit ?`, userid, id)
+			from timeline inner join users on timeline.userid=users.id and timeline.userid=? order by id desc limit ?`, userid, id)
 		} else {
 			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
-			from timeline inner join users on timeline.userid=users.id where timeline.id<? and timeline.userid=? order by id desc limit ?;`, from, userid, id)
+			from timeline inner join users on timeline.userid=users.id 
+			where timeline.id<? and timeline.userid=? order by id desc limit ?;`, from, userid, id)
 		}
 		if err != nil {
 			panic(err)
@@ -272,7 +315,6 @@ func UpdateUserInfo(db *sql.DB) echo.HandlerFunc {
 			defer w.Close()
 			w.Write(Imagebyte)
 		}
-		fmt.Println(ucontent.UserName, claims["sub"])
 		r, _ := db.Exec(`update users set name=? where id=?;`, ucontent.UserName, claims["sub"])
 		fmt.Println(r.RowsAffected())
 		return c.JSON(http.StatusOK, map[string]interface{}{"result": "ok"})
@@ -280,8 +322,8 @@ func UpdateUserInfo(db *sql.DB) echo.HandlerFunc {
 	}
 }
 
-//WebsocketServer タイムライン配信用
-func WebsocketServer(c echo.Context) error {
+//WebsocketGlobalServer タイムライン配信用
+func WebsocketGlobalServer(c echo.Context) error {
 	c.Response().Header().Set("Sec-Websocket-Protocol", c.Request().Header["Sec-Websocket-Protocol"][0])
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), c.Response().Header())
 
@@ -289,17 +331,51 @@ func WebsocketServer(c echo.Context) error {
 		return err
 	}
 	defer ws.Close()
-	client[ws] = true
-
+	globalClient[ws] = true
+	// claims := user.Claims.(jwt.MapClaims)
 	for {
 		// Read
 		_, _, err := ws.ReadMessage()
 		if err != nil {
-			delete(client, ws)
+			delete(globalClient, ws)
 			return err
 		}
 	}
+}
 
+//WebsocketHomeServer タイムライン配信用
+func WebsocketHomeServer(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		c.Response().Header().Set("Sec-Websocket-Protocol", c.Request().Header["Sec-Websocket-Protocol"][0])
+		ws, err := upgrader.Upgrade(c.Response(), c.Request(), c.Response().Header())
+
+		if err != nil {
+			return err
+		}
+		defer ws.Close()
+		user := c.Get("user").(*jwt.Token)
+		claims := user.Claims.(jwt.MapClaims)
+		rows, err := db.Query(`select followid from follows where userid=?;`, claims["sub"])
+		if len(homeClient) == 0 {
+			homeClient[ws] = map[int]bool{}
+		} else {
+			homeClient[ws] = make(map[int]bool)
+		}
+		for rows.Next() {
+			var id int
+			if err := rows.Scan(&id); err != nil {
+				log.Fatal(err)
+			}
+			homeClient[ws][id] = true
+		}
+		for {
+			_, _, err := ws.ReadMessage()
+			if err != nil {
+				delete(homeClient, ws)
+				return err
+			}
+		}
+	}
 }
 
 //GetUserProfileImg はユーザアイコンを取得します
@@ -307,7 +383,6 @@ func GetUserProfileImg() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		id := c.Param("id")
 		_, err := os.Stat(id)
-		fmt.Println(id)
 		if err == nil {
 			return c.File(id)
 		}
@@ -315,6 +390,7 @@ func GetUserProfileImg() echo.HandlerFunc {
 	}
 }
 
+//IsFollow は認証ユーザーが指定したユーザーをフォローしてるか確認します。
 func IsFollow(db *sql.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var count int
@@ -335,8 +411,10 @@ func Follow(db *sql.DB) echo.HandlerFunc {
 		var count int
 		id := c.Param("id")
 		user := c.Get("user").(*jwt.Token)
-
 		claims := user.Claims.(jwt.MapClaims)
+		if id == claims["sub"] {
+			return c.JSON(http.StatusOK, map[string]interface{}{"result": false})
+		}
 		db.QueryRow("select COUNT(*) FROM follows where userid=? and followid=?;", claims["sub"], id).Scan(&count)
 		if count != 0 {
 			return c.JSON(http.StatusOK, map[string]interface{}{"result": false})
@@ -368,5 +446,35 @@ func UnFollow(db *sql.DB) echo.HandlerFunc {
 		}
 		return c.JSON(http.StatusOK, map[string]interface{}{"result": true})
 
+	}
+}
+
+//TweetCount は指定したユーザのツイート数を取得します。
+func TweetCount(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var count int
+		id := c.Param("id")
+		db.QueryRow("select COUNT(*) FROM timeline where userid=?", id).Scan(&count)
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": true, "count": count})
+	}
+}
+
+//GetFollowNumber は指定したユーザのフォロー人数を取得します。
+func GetFollowNumber(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var count int
+		id := c.Param("id")
+		db.QueryRow("select COUNT(*) FROM follows where userid=?", id).Scan(&count)
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": true, "count": count})
+	}
+}
+
+//GetFollowerNumber は指定したユーザのフォロワー人数を取得します。
+func GetFollowerNumber(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var count int
+		id := c.Param("id")
+		db.QueryRow("select COUNT(*) FROM follows where followid=?", id).Scan(&count)
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": true, "count": count})
 	}
 }

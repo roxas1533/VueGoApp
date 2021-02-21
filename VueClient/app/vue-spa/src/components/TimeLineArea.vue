@@ -48,10 +48,10 @@
           <i class="fas fa-home"></i>
         </div>
         <span class="homeString">
-          Home
+          {{type}}
         </span>
       </div>
-      <div class="TimeLineContents" id="TimeLineContents"></div>
+      <div class="TimeLineContents" ref="TimeLineContents"></div>
   </div>
 </template>
 
@@ -60,20 +60,37 @@ import Vue from 'vue';
 import talkContent from './ContentArea.vue';
 
 let socket;
-let timeLineC;
 let snc = false;
 export default {
   destoryed() {
     socket.close();
   },
+  props: {
+    type: String,
+  },
   components: {
+  },
+  data() {
+    const loadID = 0;
+    return { loadID };
   },
   methods: {
     async ScrollE() {
       if (snc === false) {
-        if (this.$store.state.loadID !== 1) {
-          if (Math.round((timeLineC.scrollTop / (timeLineC.scrollHeight - timeLineC.clientHeight)) * 100) > 80) {
-            const url = `${this.$store.state.APIserver}/get/20/${this.$store.state.loadID}`;
+        if (this.$loadID !== 1) {
+          if (Math.round((this.$refs.TimeLineContents.scrollTop / (this.$refs.TimeLineContents.scrollHeight
+          - this.$refs.TimeLineContents.clientHeight)) * 100) > 80) {
+            let url;
+            switch (this.type) {
+              case 'Global':
+                url = `${this.$store.state.APIserver}/get/20/${this.$loadID}`;
+                break;
+              case 'Home':
+                url = `${this.$store.state.APIserver}/getUsersTimeLine/20/${this.$loadID}`;
+                break;
+              default:
+                break;
+            }
             snc = true;
             const returnData = await window.fetch(url, {
               method: 'POST',
@@ -86,7 +103,7 @@ export default {
               returnData.result.forEach((element) => {
                 this.AddContentEnd(element);
               });
-              this.$store.state.loadID = returnData.result.pop().ID;
+              this.$loadID = returnData.result.pop().ID;
               snc = false;
             }
           }
@@ -111,22 +128,32 @@ export default {
       return null;
     },
     AddContentEnd(data) {
-      timeLineC.appendChild(this.makeContent(data).$el);
+      this.$refs.TimeLineContents.appendChild(this.makeContent(data).$el);
     },
     showProfile(username, uid) {
       this.$emit('showProfile', username, uid);
     },
     AddContentTop(data) {
-      timeLineC.insertBefore(this.makeContent(data).$el, timeLineC.firstChild);
+      this.$refs.TimeLineContents.insertBefore(this.makeContent(data).$el, this.$refs.TimeLineContents.firstChild);
     },
   },
   async mounted() {
-    timeLineC = document.getElementById('TimeLineContents');
-
-    timeLineC.addEventListener('scroll', this.ScrollE);
-
+    this.$refs.TimeLineContents.addEventListener('scroll', this.ScrollE);
     if (this.$store.state.JWTtoken !== '') {
-      const url = `${this.$store.state.APIserver}/get/20/0`;
+      let url;
+      let socketUrl;
+      switch (this.type) {
+        case 'Global':
+          url = `${this.$store.state.APIserver}/get/20/0`;
+          socketUrl = `ws://${this.$store.state.websocketserver}/home/streamGlobalTimeLine`;
+          break;
+        case 'Home':
+          url = `${this.$store.state.APIserver}/getUsersTimeLine/20/0`;
+          socketUrl = `ws://${this.$store.state.websocketserver}/home/streamHomeTimeLine`;
+          break;
+        default:
+          break;
+      }
       const returnData = await window.fetch(url, {
         method: 'POST',
         headers: {
@@ -138,9 +165,9 @@ export default {
         returnData.result.forEach((element) => {
           this.AddContentEnd(element);
         });
-        this.$store.state.loadID = returnData.result.pop().ID;
+        this.$loadID = returnData.result.pop().ID;
       }
-      socket = new WebSocket(`ws://${this.$store.state.websocketserver}/home/getTimeLine`, [this.$store.state.JWTtoken]);
+      socket = new WebSocket(socketUrl, [this.$store.state.JWTtoken]);
       socket.onmessage = (evt) => {
         const data = JSON.parse(evt.data);
         this.AddContentTop(data);

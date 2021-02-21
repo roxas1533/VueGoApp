@@ -36,14 +36,20 @@ func main() {
 	talk.Use(middleware.JWT([]byte(handler.Secret)))
 	talk.POST("/talk", handler.TalkAPI(db))
 	talk.POST("/get/:id/:from", handler.GetTimeLine(db))
+	talk.POST("/getUsersTimeLine/:id/:from", handler.GetUsersTimeLine(db))
 	talk.POST("/getusers/:userid/:id/:from", handler.GetTimeLineUser(db))
 	talk.POST("/update", handler.UpdateUserInfo(db))
 	talk.POST("/follow/:id", handler.Follow(db))
 	talk.POST("/unfollow/:id", handler.UnFollow(db))
-	talk.GET("/isFollow/:id", handler.IsFollow(db))
+	talk.POST("/tweetCount/:id", handler.TweetCount(db))
+	talk.POST("/isFollow/:id", handler.IsFollow(db))
+	talk.POST("/getFollowNumber/:id", handler.GetFollowNumber(db))
+	talk.POST("/getFollowerNumber/:id", handler.GetFollowerNumber(db))
+
 	r := e.Group("/home")
 	r.Use(handler.CustomMiddleware)
-	r.GET("/getTimeLine", handler.WebsocketServer)
+	r.GET("/streamGlobalTimeLine", handler.WebsocketGlobalServer)
+	r.GET("/streamHomeTimeLine", handler.WebsocketHomeServer(db))
 
 	// サーバー起動
 	e.Logger.Fatal(e.Start(":8000"))

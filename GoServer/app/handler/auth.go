@@ -22,7 +22,7 @@ func getToken(username string, id string) string {
 }
 
 //CheckToken JWTトークンを検証します。
-func CheckToken(r string) bool {
+func CheckToken(r string) *jwt.Token {
 	token, err := jwt.Parse(r, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return "", nil
@@ -30,36 +30,36 @@ func CheckToken(r string) bool {
 		return []byte(Secret), nil
 	})
 	if token == nil {
-		return false
+		return nil
 	}
 	if err != nil {
 		if ve, ok := err.(*jwt.ValidationError); ok {
 			if ve.Errors&jwt.ValidationErrorExpired != 0 {
 				fmt.Printf("%s is expired", r)
-				return false
+				return nil
 			}
 			fmt.Printf("%s is invalid", r)
-			return false
+			return nil
 		}
 		fmt.Printf("%s is invalid", r)
-		return false
+		return nil
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		fmt.Printf("no claims")
-		return false
+		return nil
 	}
 	userID, ok := claims["name"].(string)
 	if !ok {
 		fmt.Printf("no claims")
-		return false
+		return nil
 	}
 	id, ok := claims["sub"].(string)
 	if !ok {
 		fmt.Printf("no claims")
-		return false
+		return nil
 	}
 	_ = userID
 	_ = id
-	return true
+	return token
 }

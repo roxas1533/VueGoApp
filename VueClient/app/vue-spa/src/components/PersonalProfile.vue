@@ -120,7 +120,7 @@
     .ff{
       border-left: thin black solid;
     }
-    #ffButon{
+    .ffbutton{
       margin-left: auto;
     }
 
@@ -152,10 +152,10 @@
                 </div>
             </div>
             <div class="ffconent">
-                <FFcontent title="TALKS" :num=0></FFcontent>
-                <FFcontent title="FOLLOWING" class="ff" :num=1></FFcontent>
-                <FFcontent title="FOLLOWERS" class="ff" :num=0></FFcontent>
-                <div id="ffButon">
+                <FFcontent title="TALKS" :num="tweetCount"></FFcontent>
+                <FFcontent title="FOLLOWING" class="ff" :num="followNum"></FFcontent>
+                <FFcontent title="FOLLOWERS" class="ff" :num="followerNum"></FFcontent>
+                <div class="ffbutton" ref="ffButon">
                 </div>
             </div>
             <div class="userContent" id="userContent">
@@ -182,33 +182,49 @@ export default {
     userID: Number,
   },
   async mounted() {
-    let returnData = await window.fetch(`${this.$store.state.APIserver}/isFollow/${this.userID}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${this.$store.state.JWTtoken}`,
-        'Content-Type': 'text/plain',
-      },
-    }).then((res) => res.json());
-    let ComponentClass;
-    if (returnData.result === true) {
-      ComponentClass = Vue.extend(unFollowButton);
+    let returnData;
+    if (this.$store.state.userId !== this.userID) {
+      returnData = await this.nHfetch(`${this.$store.state.APIserver}/isFollow/${this.userID}`);
+      let ComponentClass;
+      if (returnData.result === true) {
+        ComponentClass = Vue.extend(unFollowButton);
+      } else {
+        ComponentClass = Vue.extend(FollowButton);
+      }
+      const instance = new ComponentClass({
+        propsData: {
+          Follow: 'Follow',
+        },
+      });
+      instance.$on('follow', this.follow);
+      instance.$on('unfollow', this.unfollow);
+      instance.$mount();
+      this.$refs.ffButon.appendChild(instance.$el);
     } else {
-      ComponentClass = Vue.extend(FollowButton);
+      const ComponentClass = Vue.extend(FollowButton);
+      const instance = new ComponentClass({
+        propsData: {
+          Follow: 'プロフィールを編集',
+        },
+      });
+      instance.$on('follow', this.showEditProfile);
+      instance.$mount();
+      this.$refs.ffButon.appendChild(instance.$el);
     }
-    const instance = new ComponentClass();
-    instance.$on('follow', this.follow);
-    instance.$on('unfollow', this.unfollow);
-    instance.$mount();
-    document.getElementById('ffButon').appendChild(instance.$el);
+    returnData = await this.nHfetch(`${this.$store.state.APIserver}/tweetCount/${this.userID}`);
+    if (returnData.result === true) {
+      this.tweetCount = returnData.count;
+    }
+    returnData = await this.nHfetch(`${this.$store.state.APIserver}/getFollowNumber/${this.userID}`);
+    if (returnData.result === true) {
+      this.followNum = returnData.count;
+    }
+    returnData = await this.nHfetch(`${this.$store.state.APIserver}/getFollowerNumber/${this.userID}`);
+    if (returnData.result === true) {
+      this.followerNum = returnData.count;
+    }
     //----------------------------------------------------------------------------------------------------------
-    const url = `${this.$store.state.APIserver}/getusers/${this.userID}/20/0`;
-    returnData = await window.fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.$store.state.JWTtoken}`,
-        'Content-Type': 'application/json',
-      },
-    }).then((res) => res.json());
+    returnData = await this.nHfetch(`${this.$store.state.APIserver}/getusers/${this.userID}/20/0`);
     if (returnData.result !== null) {
       returnData.result.forEach((element) => {
         this.AddContentEnd(element);
@@ -216,47 +232,55 @@ export default {
       this.$store.state.loadID = returnData.result.pop().ID;
     }
   },
-
+  // ----------------------------------------mount処理↑↑↑↑↑↑↑↑↑↑↑↑↑↑-------------------------------------------------------------
   data() {
     return {
       profile: `${this.$store.state.APIserver}/profile/${this.userID}.png?${(new Date()).getMinutes()}`,
       innerusername: this.$store.state.userName,
       Follow: '',
+      tweetCount: 0,
+      followNum: 0,
+      followerNum: 0,
+
     };
   },
+  // ----------------------------------------メソッドの開始↓↓↓↓↓↓↓↓↓↓↓-------------------------------------------------------------
   methods: {
-    async follow() {
-      const url = `${this.$store.state.APIserver}/follow/${this.userID}`;
-      const returnData = await window.fetch(url, {
+    async nHfetch(url) {
+      const r = await window.fetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.$store.state.JWTtoken}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'text/plain',
         },
       }).then((res) => res.json());
+      return r;
+    },
+    async follow() {
+      const url = `${this.$store.state.APIserver}/follow/${this.userID}`;
+      const returnData = await this.nHfetch(url);
       if (returnData.result) {
         const ComponentClass = Vue.extend(unFollowButton);
         const instance = new ComponentClass();
         instance.$on('unfollow', this.unfollow);
         instance.$mount();
-        document.getElementById('ffButon').appendChild(instance.$el);
+        this.$refs.ffButon.appendChild(instance.$el);
       }
     },
     async unfollow() {
       const url = `${this.$store.state.APIserver}/unfollow/${this.userID}`;
-      const returnData = await window.fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.$store.state.JWTtoken}`,
-          'Content-Type': 'application/json',
-        },
-      }).then((res) => res.json());
+      const returnData = await this.nHfetch(url);
+
       if (returnData.result) {
         const ComponentClass = Vue.extend(FollowButton);
-        const instance = new ComponentClass();
+        const instance = new ComponentClass({
+          propsData: {
+            Follow: 'Follow',
+          },
+        });
         instance.$on('follow', this.follow);
         instance.$mount();
-        document.getElementById('ffButon').appendChild(instance.$el);
+        this.$refs.ffButon.appendChild(instance.$el);
       }
     },
     AddContentEnd(data) {
@@ -275,13 +299,6 @@ export default {
       document.getElementById('userContent').appendChild(instance.$el);
       // }
     },
-    se(e) {
-      if (e.target.files[0].type === 'image/png') {
-        const reader = new FileReader();
-        reader.onload = this.onload;
-        reader.readAsDataURL(e.target.files[0]);
-      }
-    },
     onload(ev) {
       this.profile = ev.target.result;
     },
@@ -292,6 +309,11 @@ export default {
     showProfile(sc, id) {
       this.$emit('showProfile', sc, id);
       this.$destroy();
+      if (this.$el.parentNode) this.$el.parentNode.removeChild(this.$el);
+    },
+    showEditProfile() {
+      this.$emit('showEditProfile');
+      this.close();
       if (this.$el.parentNode) this.$el.parentNode.removeChild(this.$el);
     },
     close() {
