@@ -227,7 +227,7 @@ export default {
     returnData = await this.nHfetch(`${this.$store.state.APIserver}/getusers/${this.userID}/20/0`);
     if (returnData.result !== null) {
       returnData.result.forEach((element) => {
-        this.AddContentEnd(element);
+        this.AddContentEnd(element, returnData.favolist);
       });
       this.$store.state.loadID = returnData.result.pop().ID;
     }
@@ -265,6 +265,7 @@ export default {
         instance.$on('unfollow', this.unfollow);
         instance.$mount();
         this.$refs.ffButon.appendChild(instance.$el);
+        this.$store.state.websocketUpdate = new Date().getTime();
       }
     },
     async unfollow() {
@@ -281,17 +282,22 @@ export default {
         instance.$on('follow', this.follow);
         instance.$mount();
         this.$refs.ffButon.appendChild(instance.$el);
+        this.$store.state.websocketUpdate = new Date().getTime();
       }
     },
-    AddContentEnd(data) {
+    AddContentEnd(data, fav) {
     // if (data.Type === 'push') {
       const ComponentClass = Vue.extend(talkContent);
+      const store = this.$store;
       const instance = new ComponentClass({
+        store,
         propsData: {
           username: data.name,
           content: data.Content,
           id: data.UserID,
           time: data.Time,
+          talkID: data.ID,
+          isFavorite: (fav != null ? (fav.indexOf(data.ID) >= 0) : false),
         },
       });
       instance.$on('showProfile', this.showProfile);

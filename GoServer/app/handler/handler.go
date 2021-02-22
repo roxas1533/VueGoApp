@@ -203,6 +203,23 @@ func TalkAPI(db *sql.DB) echo.HandlerFunc {
 	}
 }
 
+func getFavoritList(db *sql.DB, id string, num string, from string) []int {
+	var favoritelist []int
+	rows, err := db.Query(`select contentid from favorites where userid=? and contentid<? order by contentid desc limit ?`, id, from, num)
+	if err != nil {
+		return favoritelist
+	}
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			log.Fatal(err)
+		}
+		favoritelist = append(favoritelist, id)
+	}
+	return favoritelist
+
+}
+
 //GetTimeLine タイムライン取得
 func GetTimeLine(db *sql.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
@@ -213,6 +230,7 @@ func GetTimeLine(db *sql.DB) echo.HandlerFunc {
 		if from == "0" {
 			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
 			from timeline inner join users on timeline.userid=users.id order by id desc limit ?`, id)
+			from = "1000000"
 		} else {
 			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
 			from timeline inner join users on timeline.userid=users.id where timeline.id<? order by id desc limit ?;`, from, id)
@@ -221,7 +239,8 @@ func GetTimeLine(db *sql.DB) echo.HandlerFunc {
 			panic(err)
 		}
 		defer rows.Close()
-		return returnTalkContents(c, rows)
+		fmt.Println()
+		return returnTalkContents(c, rows, db, id, from)
 	}
 }
 
@@ -238,6 +257,7 @@ func GetUsersTimeLine(db *sql.DB) echo.HandlerFunc {
 			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name from follows join timeline on 
 			timeline.userid=follows.followid and follows.userid=? 
 			join users on timeline.userid=users.id order by timeline.id desc limit ?;`, claims["sub"], id)
+			from = "1000000"
 		} else {
 			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name from follows join timeline on 
 			timeline.userid=follows.followid and follows.userid=? 
@@ -247,7 +267,7 @@ func GetUsersTimeLine(db *sql.DB) echo.HandlerFunc {
 			panic(err)
 		}
 		defer rows.Close()
-		return returnTalkContents(c, rows)
+		return returnTalkContents(c, rows, db, id, from)
 	}
 }
 
@@ -257,11 +277,13 @@ func GetTimeLineUser(db *sql.DB) echo.HandlerFunc {
 		userid := c.Param("userid")
 		id := c.Param("id")
 		from := c.Param("from")
+
 		var rows *sql.Rows
 		var err error
 		if from == "0" {
 			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
 			from timeline inner join users on timeline.userid=users.id and timeline.userid=? order by id desc limit ?`, userid, id)
+			from = "1000000"
 		} else {
 			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
 			from timeline inner join users on timeline.userid=users.id 
@@ -271,11 +293,13 @@ func GetTimeLineUser(db *sql.DB) echo.HandlerFunc {
 			panic(err)
 		}
 		defer rows.Close()
-		return returnTalkContents(c, rows)
+		return returnTalkContents(c, rows, db, id, from)
 	}
 }
 
-func returnTalkContents(c echo.Context, rows *sql.Rows) error {
+func returnTalkContents(c echo.Context, rows *sql.Rows, db *sql.DB, id string, from string) error {
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(jwt.MapClaims)
 	var liveTalkContents []LiveTalkContent
 	for rows.Next() {
 		var id int
@@ -289,7 +313,10 @@ func returnTalkContents(c echo.Context, rows *sql.Rows) error {
 		liveTalkContent := LiveTalkContent{"push", id, name, content, time, userid}
 		liveTalkContents = append(liveTalkContents, liveTalkContent)
 	}
-	return c.JSON(http.StatusOK, map[string]interface{}{"result": liveTalkContents})
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"result":   liveTalkContents,
+		"favolist": getFavoritList(db, claims["sub"].(string), id, from),
+	})
 }
 
 //UpdateUserInfo はユーザーデータをアップデートします。
@@ -434,7 +461,6 @@ func UnFollow(db *sql.DB) echo.HandlerFunc {
 		var count int
 		id := c.Param("id")
 		user := c.Get("user").(*jwt.Token)
-
 		claims := user.Claims.(jwt.MapClaims)
 		db.QueryRow("select COUNT(*) FROM follows where userid=? and followid=?;", claims["sub"], id).Scan(&count)
 		if count == 0 {
@@ -476,5 +502,23 @@ func GetFollowerNumber(db *sql.DB) echo.HandlerFunc {
 		id := c.Param("id")
 		db.QueryRow("select COUNT(*) FROM follows where followid=?", id).Scan(&count)
 		return c.JSON(http.StatusOK, map[string]interface{}{"result": true, "count": count})
+	}
+}
+
+//FavoritTalk は指定したtツイートにfavoriteします、すでにされていた場合取り消します。
+func FavoritTalk(db *sql.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		id := c.Param("id")
+		user := c.Get("user").(*jwt.Token)
+		claims := user.Claims.(jwt.MapClaims)
+		var count int
+		db.QueryRow("select COUNT(*) from favorites where userid=? and contentid=?", claims["sub"], id).Scan(&count)
+		fmt.Println(count)
+		if count == 0 {
+			db.Exec("insert into favorites(userid,contentid,created_time) values(?,?,default)", claims["sub"], id)
+		} else {
+			db.Exec("delete from favorites where userid=? and contentid=?", claims["sub"], id)
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": true})
 	}
 }

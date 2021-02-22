@@ -68,6 +68,8 @@ export default {
       const instance = new ComponentClass({
         store,
       });
+      this.$store.state.websocketUpdate = new Date().getTime();
+
       instance.$mount();
       // c.appendch;
       // c.insertBefore(instance.$el, c.firstChild);

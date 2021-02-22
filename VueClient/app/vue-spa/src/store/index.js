@@ -14,11 +14,17 @@ export default new Vuex.Store({
     // websocketserver: 'roxas-71a9bf3a.localhost.run',
     timelineKind: ['Global', 'Home'],
     websocketserver: 'localhost:8000',
+    websocketUpdate: new Date().getTime(),
+    favlist: { favid: 0, state: false },
   },
   mutations: {
   },
   actions: {
   },
   modules: {
+  },
+  getters: {
+    getwebsocketUpdate: (state) => state.websocketUpdate,
+    getFavlist: (state) => state.favlist,
   },
 });

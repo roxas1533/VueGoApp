@@ -59,11 +59,10 @@
 import Vue from 'vue';
 import talkContent from './ContentArea.vue';
 
-let socket;
 let snc = false;
 export default {
   destoryed() {
-    socket.close();
+    this.$socket.close();
   },
   props: {
     type: String,
@@ -72,7 +71,9 @@ export default {
   },
   data() {
     const loadID = 0;
-    return { loadID };
+    const socket = null;
+
+    return { loadID, socket };
   },
   methods: {
     async ScrollE() {
@@ -101,7 +102,7 @@ export default {
             }).then((res) => res.json());
             if (returnData.result !== null) {
               returnData.result.forEach((element) => {
-                this.AddContentEnd(element);
+                this.AddContentEnd(element, returnData.favolist);
               });
               this.$loadID = returnData.result.pop().ID;
               snc = false;
@@ -110,15 +111,19 @@ export default {
         }
       }
     },
-    makeContent(data) {
+    makeContent(data, fav) {
       if (data.Type === 'push') {
         const ComponentClass = Vue.extend(talkContent);
+        const store = this.$store;
         const instance = new ComponentClass({
+          store,
           propsData: {
             username: data.name,
             content: data.Content,
             id: data.UserID,
             time: data.Time,
+            talkID: data.ID,
+            isFavorite: (fav != null ? (fav.indexOf(data.ID) >= 0) : false),
           },
         });
         instance.$on('showProfile', this.showProfile);
@@ -127,21 +132,21 @@ export default {
       }
       return null;
     },
-    AddContentEnd(data) {
-      this.$refs.TimeLineContents.appendChild(this.makeContent(data).$el);
+    AddContentEnd(data, fav) {
+      this.$refs.TimeLineContents.appendChild(this.makeContent(data, fav).$el);
     },
     showProfile(username, uid) {
       this.$emit('showProfile', username, uid);
     },
-    AddContentTop(data) {
-      this.$refs.TimeLineContents.insertBefore(this.makeContent(data).$el, this.$refs.TimeLineContents.firstChild);
+    AddContentTop(data, fav) {
+      this.$refs.TimeLineContents.insertBefore(this.makeContent(data, fav).$el, this.$refs.TimeLineContents.firstChild);
     },
-  },
-  async mounted() {
-    this.$refs.TimeLineContents.addEventListener('scroll', this.ScrollE);
-    if (this.$store.state.JWTtoken !== '') {
+    async connectServer() {
       let url;
       let socketUrl;
+      if (this.$socket ?? false) {
+        this.$socket.close();
+      }
       switch (this.type) {
         case 'Global':
           url = `${this.$store.state.APIserver}/get/20/0`;
@@ -154,25 +159,35 @@ export default {
         default:
           break;
       }
-      const returnData = await window.fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.$store.state.JWTtoken}`,
-          'Content-Type': 'application/json',
-        },
-      }).then((res) => res.json());
-      if (returnData.result !== null) {
-        returnData.result.forEach((element) => {
-          this.AddContentEnd(element);
-        });
-        this.$loadID = returnData.result.pop().ID;
+      if (this.$socket !== null) {
+        const returnData = await window.fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.$store.state.JWTtoken}`,
+            'Content-Type': 'application/json',
+          },
+        }).then((res) => res.json());
+        if (returnData.result !== null) {
+          returnData.result.forEach((element) => {
+            this.AddContentEnd(element, returnData.favolist);
+          });
+          this.$loadID = returnData.result.pop().ID;
+        }
       }
-      socket = new WebSocket(socketUrl, [this.$store.state.JWTtoken]);
-      socket.onmessage = (evt) => {
-        const data = JSON.parse(evt.data);
+      this.$socket = new WebSocket(socketUrl, [this.$store.state.JWTtoken]);
+      this.$socket.onmessage = (e) => {
+        const data = JSON.parse(e.data);
         this.AddContentTop(data);
       };
+    },
+  },
+  async mounted() {
+    this.$refs.TimeLineContents.addEventListener('scroll', this.ScrollE);
+    if (this.$store.state.JWTtoken !== '') {
+      this.connectServer();
+      this.$store.watch(() => this.$store.getters.getwebsocketUpdate, () => { this.connectServer(); });
     }
   },
+
 };
 </script>

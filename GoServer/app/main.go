@@ -45,6 +45,8 @@ func main() {
 	talk.POST("/isFollow/:id", handler.IsFollow(db))
 	talk.POST("/getFollowNumber/:id", handler.GetFollowNumber(db))
 	talk.POST("/getFollowerNumber/:id", handler.GetFollowerNumber(db))
+	talk.POST("/favorite/:id", handler.FavoritTalk(db))
+	// talk.POST("/favoriteList/:id/:from", handler.getFavoritList(db))
 
 	r := e.Group("/home")
 	r.Use(handler.CustomMiddleware)
