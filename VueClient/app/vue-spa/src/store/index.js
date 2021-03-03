@@ -15,7 +15,7 @@ export default new Vuex.Store({
     timelineKind: ['Global', 'Home'],
     websocketserver: 'localhost:8000',
     websocketUpdate: new Date().getTime(),
-    favlist: { favid: 0, state: false },
+    favlist: { favid: 0, state: false, fav: 0 },
   },
   mutations: {
   },

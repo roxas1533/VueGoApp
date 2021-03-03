@@ -77,6 +77,10 @@
     .fas{
         color: yellow;
     }
+    .reactionNum{
+      font-size: 13px;
+      margin-left: 2px;
+    }
 </style>
 <template>
     <div class="Wrapcontents">
@@ -97,6 +101,7 @@
         <div class="buttonContent">
             <div class="reactionButton">
                 <i @click="favorite" class="far fa-star" ref="star"></i>
+                <span class=reactionNum>{{favNum}}</span>
             </div>
         </div>
     </div>
@@ -113,6 +118,7 @@ export default {
     time: String,
     talkID: Number,
     isFavorite: Boolean,
+    favNum: Number,
   },
   data() {
     return {
@@ -124,6 +130,7 @@ export default {
       this.$refs.star.classList.toggle('far');
       this.$refs.star.classList.toggle('fas');
     }
+    if (this.favNum === 0) { this.favNum = ''; }
   },
   computed: {
     fav() {
@@ -136,6 +143,8 @@ export default {
         if (fav.favid === this.talkID) {
           this.$refs.star.classList.toggle('far');
           this.$refs.star.classList.toggle('fas');
+          this.favNum = fav.fav;
+          if (this.favNum === 0) { this.favNum = ''; }
         }
       },
       deep: true,
@@ -157,12 +166,12 @@ export default {
           'Content-Type': 'text/plain',
         },
       }).then((res) => res.json());
-      if (r.result) {
-        this.isFavorite = !this.isFavorite;
-        this.$store.state.favlist.favid = this.talkID;
-        this.$store.state.favlist.state = this.isFavorite;
-        console.log('test2', this.$store.getters.getFavlist);
-      }
+      this.isFavorite = !this.isFavorite;
+      this.$store.state.favlist.favid = this.talkID;
+      this.$store.state.favlist.state = this.isFavorite;
+      this.$store.state.favlist.fav = this.favNum;
+      if (r.result) this.$store.state.favlist.fav += 1;
+      else this.$store.state.favlist.fav -= 1;
     },
   },
 };

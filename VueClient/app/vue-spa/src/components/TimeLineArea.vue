@@ -124,6 +124,7 @@ export default {
             time: data.Time,
             talkID: data.ID,
             isFavorite: (fav != null ? (fav.indexOf(data.ID) >= 0) : false),
+            favNum: data.FavNum,
           },
         });
         instance.$on('showProfile', this.showProfile);
@@ -141,7 +142,7 @@ export default {
     AddContentTop(data, fav) {
       this.$refs.TimeLineContents.insertBefore(this.makeContent(data, fav).$el, this.$refs.TimeLineContents.firstChild);
     },
-    async connectServer() {
+    async connectServer(isFirst) {
       let url;
       let socketUrl;
       if (this.$socket ?? false) {
@@ -159,7 +160,7 @@ export default {
         default:
           break;
       }
-      if (this.$socket !== null) {
+      if (this.$socket !== null && isFirst) {
         const returnData = await window.fetch(url, {
           method: 'POST',
           headers: {
@@ -184,8 +185,10 @@ export default {
   async mounted() {
     this.$refs.TimeLineContents.addEventListener('scroll', this.ScrollE);
     if (this.$store.state.JWTtoken !== '') {
-      this.connectServer();
-      this.$store.watch(() => this.$store.getters.getwebsocketUpdate, () => { this.connectServer(); });
+      this.connectServer(true);
+      this.$store.watch(() => this.$store.getters.getwebsocketUpdate, () => {
+        if (this.type === 'Home') this.connectServer(false);
+      });
     }
   },
 

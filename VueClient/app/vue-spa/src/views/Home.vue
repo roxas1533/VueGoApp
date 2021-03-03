@@ -76,9 +76,7 @@ export default {
       // mc.style.height = '100%';
       mc.appendChild(instance.$el);
     },
-    closeEdit() {
-      document.getElementById('Home').style.setProperty('--Edisplay', 'none');
-    },
+
     showProfile(sc, id) {
       const mc = document.getElementById('model-container');
       const store = this.$store;

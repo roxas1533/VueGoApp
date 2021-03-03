@@ -53,6 +53,7 @@ type LiveTalkContent struct {
 	Content string `json:"Content"`
 	Time    string `json:"Time"`
 	UserID  int    `json:"UserID"`
+	FavNum  int    `json:"FavNum"`
 }
 
 type UpdateUserContent struct {
@@ -228,12 +229,22 @@ func GetTimeLine(db *sql.DB) echo.HandlerFunc {
 		var rows *sql.Rows
 		var err error
 		if from == "0" {
-			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
-			from timeline inner join users on timeline.userid=users.id order by id desc limit ?`, id)
+			rows, err = db.Query(
+				`select timeline.id,timeline.created_time,content,timeline.userid,name,count(contentid) 
+				from timeline 
+				join users 
+				on timeline.userid=users.id 
+				left outer join favorites 
+				on favorites.contentid=timeline.id 
+				group by contentid,content,timeline.id 
+				order by id desc limit ?;`,
+				id)
 			from = "1000000"
 		} else {
-			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
-			from timeline inner join users on timeline.userid=users.id where timeline.id<? order by id desc limit ?;`, from, id)
+			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name,count(contentid) from timeline 
+			join users on timeline.userid=users.id 
+			left outer join favorites on favorites.contentid=timeline.id where timeline.id<? group by contentid,content,timeline.id 
+			order by id desc limit ?;`, from, id)
 		}
 		if err != nil {
 			panic(err)
@@ -254,14 +265,25 @@ func GetUsersTimeLine(db *sql.DB) echo.HandlerFunc {
 		var rows *sql.Rows
 		var err error
 		if from == "0" {
-			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name from follows join timeline on 
-			timeline.userid=follows.followid and follows.userid=? 
-			join users on timeline.userid=users.id order by timeline.id desc limit ?;`, claims["sub"], id)
+			rows, err = db.Query(
+				`select timeline.id,timeline.created_time,content,timeline.userid,name,count(contentid) 
+				from follows join timeline 
+				on timeline.userid=follows.followid and follows.userid=? 
+				join users on timeline.userid=users.id 
+				left outer join favorites on favorites.contentid=timeline.id group by contentid,content,timeline.id 
+				order by timeline.id desc limit ?;`,
+				claims["sub"], id)
 			from = "1000000"
 		} else {
-			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name from follows join timeline on 
-			timeline.userid=follows.followid and follows.userid=? 
-			join users on timeline.userid=users.id where timeline.id<? order by timeline.id desc limit ?;`, claims["sub"], from, id)
+			rows, err = db.Query(
+				`select timeline.id,timeline.created_time,content,timeline.userid,name,count(contentid) 
+				from follows join timeline 
+				on timeline.userid=follows.followid and follows.userid=? 
+				join users on timeline.userid=users.id 
+				left outer join favorites on favorites.contentid=timeline.id and timeline.id<? 
+				group by contentid,content,timeline.id 
+				order by timeline.id desc limit ?;`,
+				claims["sub"], from, id)
 		}
 		if err != nil {
 			panic(err)
@@ -281,13 +303,27 @@ func GetTimeLineUser(db *sql.DB) echo.HandlerFunc {
 		var rows *sql.Rows
 		var err error
 		if from == "0" {
-			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
-			from timeline inner join users on timeline.userid=users.id and timeline.userid=? order by id desc limit ?`, userid, id)
+			rows, err = db.Query(
+				`select timeline.id,timeline.created_time,content,timeline.userid,name,count(contentid) 
+				from timeline 
+				join users 
+				on timeline.userid=users.id and timeline.userid=? 
+				left outer join favorites 
+				on favorites.contentid=timeline.id 
+				group by contentid,content,timeline.id 
+				order by id desc limit ?;`,
+				userid, id)
 			from = "1000000"
 		} else {
-			rows, err = db.Query(`select timeline.id,timeline.created_time,content,timeline.userid,name 
-			from timeline inner join users on timeline.userid=users.id 
-			where timeline.id<? and timeline.userid=? order by id desc limit ?;`, from, userid, id)
+			rows, err = db.Query(
+				`select timeline.id,timeline.created_time,content,timeline.userid,name,count(contentid) 
+				from timeline 
+				join users 
+				on timeline.userid=users.id and where timeline.id<? and timeline.userid=? 
+				left outer join favorites 
+				on favorites.contentid=timeline.id 
+				group by contentid,content,timeline.id 
+				order by id desc limit ?;`, from, userid, id)
 		}
 		if err != nil {
 			panic(err)
@@ -307,10 +343,12 @@ func returnTalkContents(c echo.Context, rows *sql.Rows, db *sql.DB, id string, f
 		var content string
 		var time string
 		var userid int
-		if err := rows.Scan(&id, &time, &content, &userid, &name); err != nil {
+		var favNum int
+		if err := rows.Scan(&id, &time, &content, &userid, &name, &favNum); err != nil {
 			log.Fatal(err)
 		}
-		liveTalkContent := LiveTalkContent{"push", id, name, content, time, userid}
+		liveTalkContent := LiveTalkContent{"push", id, name, content, time, userid, favNum}
+		fmt.Println(liveTalkContent)
 		liveTalkContents = append(liveTalkContents, liveTalkContent)
 	}
 	return c.JSON(http.StatusOK, map[string]interface{}{
@@ -516,9 +554,10 @@ func FavoritTalk(db *sql.DB) echo.HandlerFunc {
 		fmt.Println(count)
 		if count == 0 {
 			db.Exec("insert into favorites(userid,contentid,created_time) values(?,?,default)", claims["sub"], id)
-		} else {
-			db.Exec("delete from favorites where userid=? and contentid=?", claims["sub"], id)
+			return c.JSON(http.StatusOK, map[string]interface{}{"result": true})
 		}
-		return c.JSON(http.StatusOK, map[string]interface{}{"result": true})
+		db.Exec("delete from favorites where userid=? and contentid=?", claims["sub"], id)
+		return c.JSON(http.StatusOK, map[string]interface{}{"result": false})
+
 	}
 }

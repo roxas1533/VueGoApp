@@ -67,6 +67,11 @@ export default {
       pass2Error: '',
     };
   },
+  created() {
+    if (this.$store.state.JWTtoken !== '') {
+      this.$router.push({ name: 'Home' });
+    }
+  },
   methods: {
     async Send() {
       if (this.Check() === true) {
